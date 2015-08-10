@@ -1,0 +1,876 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Text;
+using ReconRunner;
+using ExcelService;
+using ReconRunner.Model;
+
+
+namespace ReconRunner.Controller
+{
+    public sealed class RRController
+    {
+        #region Properties and constructors
+        static readonly RRController instance = new RRController();
+
+        private RRDataService rrDataService = RRDataService.Instance;
+        private RRSerializer rrSerializer = new RRSerializer();
+        private ExcelService.ExcelService excelService = ExcelService.ExcelService.Instance;
+
+        // Each 2-query recon is divided into three sections:
+        //      Rows found in the first query without a matching row in the second
+        //      Rows found in the second query without a matching row in the first
+        //      Rows found in both queries that have one or more columns that do not match
+        // A single query recon has just one section, ProblemRows
+        enum reportSection
+        {
+            FirstQueryRowWithoutMatch,
+            SecondQueryRowWithoutMatch,
+            DataDifferences,
+            ProblemRows
+        }
+        private Recons recons = new Recons();
+        private RRSources sources = new RRSources();
+
+        // Use to translate index to column letter when # columns is variable
+        string columnLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";  // *** ASSUMPTION: We'll never go past Z in columns
+        // These will hold DataRow objects, with the string index key for each being built from its identifying columns
+        DataTable firstQueryData = new DataTable();
+        DataTable secondQueryData = new DataTable();
+        Dictionary<string, DataRow> q1Rows;
+        Dictionary<string, DataRow> q2Rows;
+        Dictionary<string, Cell> excelRow;
+
+        static RRController()
+        {
+        }
+
+        public static RRController Instance
+        {
+            get
+            {
+                return instance;
+            }
+        }
+        #endregion Properties and constructors
+
+        #region recons object serialization
+        /// <summary>
+        /// Creates a sample XML file populated with XML for the recon XML file
+        /// that specifies recon reports and query substituation variable values to be run
+        /// </summary>
+        /// <param name="fileName"></param>
+        public void CreateSampleXMLReconReportFile(string fileName)
+        {
+            rrSerializer.WriteSampleReconsToXMLFile(fileName);
+        }
+
+        /// <summary>
+        /// Creates a sample XML file populated with XML for the sources XML file
+        /// that holds database connection templates, connection strings, and queries
+        /// to be used in making recon reports
+        /// </summary>
+        /// <param name="fileName"></param>
+        public void CreateSampleXMLSourcesFile(string fileName)
+        {
+            rrSerializer.WriteSampleSourcesToXMLFile(fileName);
+        }
+        
+        /// <summary>
+        /// Write all the recons currently in the recons object out to an XML file.  Not too useful?
+        /// </summary>
+        /// <param name="fileName"></param>
+        public void WriteReconsToXMLFile(string fileName)
+        {
+            rrSerializer.WriteReconsToXMLFile(recons, fileName);
+        }
+
+        /// <summary>
+        /// Write all the recons currently in the recons object out to an XML file.  Not too useful?
+        /// </summary>
+        /// <param name="fileName"></param>
+        public void WriteSourcesToXMLFile(string fileName)
+        {
+            rrSerializer.WriteSourcesToXMLFile(sources, fileName);
+        }
+        
+        /// <summary>
+        /// Read in information for all the recons to be done from the specified xml file.  Note that 
+        /// each recon query will need a corresponding entry in App.Config that specifies the actual
+        /// SQL statement and connection string to be used for each query.
+        /// </summary>
+        /// <param name="fileName"></param>
+        public string ReadReconsFromXMLFile(string fileName)
+        {
+            try
+            {
+                recons = rrSerializer.ReadReconsFromXMLFile(fileName);
+                return "Done.";
+            }
+            catch (Exception e)
+            {
+                recons = null;                
+                return "Failed to load: " + e.Message;
+
+            }
+        }
+
+        /* *****TO DO MONDAY 14 JULY: Modify logic creating datatable(s) for query(ies) to use new generic dataservice that reads
+         * RRSources and other objects to make appropriate connections and recons to execute SQL queries. 
+         * 
+         */
+
+        /// <summary>
+        /// Read in information for all the sources (data source templates, connection strings, and queries) 
+        /// needed for the recons to be run.
+        /// </summary>
+        /// <param name="fileName"></param>
+        public string ReadSourcesFromXMLFile(string fileName)
+        {
+            try
+            {
+                sources = rrSerializer.ReadSourcesFromXMLFile(fileName);
+                return "Done.";
+            }
+            catch (Exception e)
+            {
+                sources = null;                
+                return "Failed to load: " + e.Message;
+            }
+        }
+
+        #endregion recons object serialization
+
+        /// <summary>
+        /// Once the recons object has been populated, this may be run to
+        /// actually execute each of the recons and write their results to a
+        /// spreadsheet.  Each recon's output will be written to its own tab
+        /// on the spreadsheet.
+        /// </summary>
+        /// <returns>A string with information on the run (success/failure/reports run/etc.)</returns>
+        public string RunRecons(string excelFileName)
+        {
+            if (sources.Queries.Count == 0 || recons.ReconList.Count == 0)
+                throw new Exception("Either sources or recons not specified");
+
+            string results = "";
+            List<DataTable> reconData = new List<DataTable>();
+
+            rrDataService.Sources = sources;
+            try
+            {
+                rrDataService.OpenConnections(recons);
+            }
+            catch (Exception ex)
+            {
+                rrDataService.CloseConnections();
+                throw new Exception("Error while trying to open connections: " + getFullErrorMessage(ex));
+            }
+
+            try
+            {
+                for (int i = 0; i < recons.ReconList.Count; i++)
+                {
+                    ReconReport recon = recons.ReconList[i];
+                    results += "Running " + recon.Name + "\r\n";
+                        // Get the data from the two queries that will be compared
+                        // getQueriesData(recon, ref firstQueryData, ref secondQueryData);
+                        reconData = rrDataService.GetReconData(recon);
+                        firstQueryData = reconData[0];
+                        var test = recon.SecondQuery;
+                        if (recon.SecondQuery != "")
+                            secondQueryData = reconData[1];
+
+                        createReconTab(recon, firstQueryData, secondQueryData);
+
+                }
+            }
+            catch(Exception e)
+            {
+                results += "Failed to run: " + e.Message +"\r\n";
+                rrDataService.CloseConnections();
+                excelService.CloseExcel();
+            }
+            rrDataService.CloseConnections();
+
+            // Save the spreadsheet and close the Excel process.
+            excelService.SaveSpreadsheet(excelFileName);
+            excelService.CloseExcel();
+
+            results += "Finished running recon reports.\r\n\r\n";
+
+            return results;
+        }
+
+        /// <summary>
+        /// Take one or two queries' data and create the corresponding tab in the spreadsheet.  For recon involving 
+        /// two queries it will correlate the two rows and create a tab with header plus 3 sections.  If a single query
+        /// report (recon has null second query) then it will just create a tab with header and 1 section.
+        /// </summary>
+        /// <param name="recon"></param>
+        /// <param name="firstQueryData"></param>
+        /// <param name="secondQueryData">May pass empty datatable for single query recons</param>
+        private void createReconTab(ReconReport recon, DataTable firstQueryData, DataTable secondQueryData)
+        {
+            int numQueries = recon.SecondQuery == "" ? 1 : 2;
+            if (recon.SecondQuery != "")
+                populateIndexedRowCollections(recon, firstQueryData, secondQueryData);
+            // Create a new worksheet within our spreadsheet to hold the results
+            excelService.CreateWorksheet(recon.TabLabel);
+            // Write the title rows
+            writeWorkSheetHeaderRows(recon);
+            // The next two sections are only needed for two-query recons
+            if (recon.SecondQuery != "")
+            {
+                // Write the first section showing rows in the first query without a match in the second query
+                writeOrphanFirstQuerySection(recon);
+                excelService.AddBlankRow();
+                excelService.AddBlankRow();
+                // Write the second section that shows rows in the second query without a match in the first query
+                writeOrphanSecondQuerySection(recon);
+                excelService.AddBlankRow();
+                excelService.AddBlankRow();
+            }
+            // Create the section of the report that either shows all the rows returned by a single query recon, or
+            // is the comparison section of a 2-query recon that shows any pairs of records that have differing values
+            // in one or more columns that are supposed to match
+            writeDataProblems(recon);
+        }
+
+        /// <summary>
+        /// Prepares the data for writing to spreadsheet for 2-query recons by creating a key for each datarow
+        /// that is created by concatenating the values for any columns designated as identity columns.  Not necessary
+        /// for single query recons.
+        /// </summary>
+        /// <param name="recon"></param>
+        /// <param name="q1Data"></param>
+        /// <param name="q2Data"></param>
+        private void populateIndexedRowCollections(ReconReport recon, DataTable q1Data, DataTable q2Data)
+        {
+            string rowKey;
+            q1Rows = new Dictionary<string, DataRow>();
+            q2Rows = new Dictionary<string, DataRow>();
+
+            try
+            {
+                foreach (DataRow row in q1Data.Rows)
+                {
+                    rowKey = "";
+                    foreach (QueryColumn column in recon.Columns)
+                    {
+                        if (column.IdentifyingColumn)
+                        {
+                            rowKey += row[column.FirstQueryName].ToString();
+                        }
+                    }
+                    q1Rows.Add(rowKey, row);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error (most likely identifying columns not sufficient to guarantee uniqueness) while preparing first query data: " + getFullErrorMessage(ex));
+            }
+
+            try
+            {
+                foreach (DataRow row in q2Data.Rows)
+                {
+                    rowKey = "";
+                    foreach (QueryColumn column in recon.Columns)
+                    {
+                        if (column.IdentifyingColumn)
+                        {
+                            rowKey += row[column.SecondQueryName].ToString();
+                        }
+                    }
+                    q2Rows.Add(rowKey, row);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error (most likely identifying columns not sufficient to guarantee uniqueness) while preparing second query data: " + getFullErrorMessage(ex));
+            }
+        }
+
+        /// <summary>
+        /// Creates the section of the recon that shows rows in the first query without a match found
+        /// in the second query.
+        /// </summary>
+        /// <param name="recon"></param>
+        private void writeOrphanFirstQuerySection(ReconReport recon)
+        {
+            CellStyle currStyle = CellStyle.LightBlue;
+            int orphanCounter = 0;
+            string counterText;
+            // Start the section with a label
+            excelRow = new Dictionary<string, Cell>();
+            excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
+            excelRow.Add("B", new Cell(recon.FirstQuery, CellStyle.Bold));
+            excelRow.Add("C", new Cell("Without a Match in", CellStyle.Bold));
+            excelRow.Add("D", new Cell(recon.SecondQuery, CellStyle.Bold));
+            excelService.AddRow(excelRow);
+            // Now write out the common columns at the left of each section
+            writeCommonHeaders(2, recon.Columns, true, true);
+            // There are no additional columns for this section, so now write out the identifying and 'always display' columns
+            // in the first query that don't have a match in the second query.
+            foreach (string rowKey in q1Rows.Keys)
+            {
+                if (!q2Rows.ContainsKey(rowKey))
+                {
+                    // Toggle background color of the row being written
+                    currStyle = toggleStyle(currStyle);
+                    // We have a row in the first query without a match in the second
+                    writeRowCommonColumns(q1Rows[rowKey], recon.Columns, reportSection.FirstQueryRowWithoutMatch, currStyle);
+                    ++orphanCounter;
+                }
+            }
+            excelRow.Clear();
+            if (orphanCounter == 1)
+            {
+                counterText = orphanCounter.ToString() + " orphan found.";
+            }
+            else
+            {
+                counterText = orphanCounter.ToString() + " orphans found.";
+            }
+            excelRow.Add("A", new Cell(counterText));
+            excelService.AddRow(excelRow);
+        }
+
+        /// <summary>
+        /// Creates the section of the recon that shows rows in the second query without a match found
+        /// in the first query.
+        /// </summary>
+        /// <param name="recon"></param>
+        private void writeOrphanSecondQuerySection(ReconReport recon)
+        {
+            CellStyle currStyle = CellStyle.LightBlue;
+            int orphanCounter = 0;
+            string counterText;
+
+            // Start the section with a label
+            excelRow = new Dictionary<string, Cell>();
+            excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
+            excelRow.Add("B", new Cell(recon.SecondQuery, CellStyle.Bold));
+            excelRow.Add("C", new Cell("Without a Match in", CellStyle.Bold));
+            excelRow.Add("D", new Cell(recon.FirstQuery, CellStyle.Bold));
+            excelService.AddRow(excelRow);
+            // Now write out the common columns at the left of each section
+
+            writeCommonHeaders(2, recon.Columns, true, true);
+            // There are no additional columns for this section, so now write out the identifying and 'always display' columns
+            // in the first query that don't have a match in the second query.
+            foreach (string rowKey in q2Rows.Keys)
+            {
+                if (!q1Rows.ContainsKey(rowKey))
+                {
+                    // Toggle background color of the row being written
+                    currStyle = toggleStyle(currStyle);
+                    // We have a row in the first query without a match in the second
+                    writeRowCommonColumns(q2Rows[rowKey], recon.Columns, reportSection.SecondQueryRowWithoutMatch, currStyle);
+                    ++orphanCounter;
+                }
+            }
+            excelRow.Clear();
+            if (orphanCounter == 1)
+            {
+                counterText = orphanCounter.ToString() + " orphan found.";
+            }
+            else
+            {
+                counterText = orphanCounter.ToString() + " orphans found.";
+            }
+            excelRow.Add("A", new Cell(counterText));
+            excelService.AddRow(excelRow);
+        }
+
+        /// <summary>
+        /// If receives CellStyle Text, returns CellStyle.LightBlue.  If receives style LightBlue
+        /// (or any other style) it returns CellStyle.Text.
+        /// </summary>
+        /// <param name="currStyle">CellStyle.Text or CellStyle.LightBlue</param>
+        /// <returns></returns>
+        private CellStyle toggleStyle(CellStyle currStyle)
+        {
+            if (currStyle == CellStyle.Text)
+            {
+                return CellStyle.LightBlue;
+            }
+            else
+            {
+                return CellStyle.Text;
+            }      
+        }
+
+        /// <summary>
+        /// If a single query recon will show all the rows returned by the query.  If a two query recon
+        /// then will show all the rows matched between the two queries that have data differences in the
+        /// columns that are marked "ShouldMatch"
+        /// </summary>
+        /// <param name="recon"></param>
+        private void writeDataProblems(ReconReport recon)
+        {
+            CellStyle currStyle = CellStyle.LightBlue;
+            int currColumnIndex;
+            int numDifferencesFound = 0;
+            int numQueries = recon.SecondQuery == "" ? 1 : 2;
+            string counterText;
+
+            // Start the section with a label if 2-query recon
+            if (recon.SecondQuery != "")
+            {
+                excelRow = new Dictionary<string, Cell>();
+                excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
+                excelRow.Add("B", new Cell(recon.FirstQuery, CellStyle.Bold));
+                excelRow.Add("C", new Cell("that have one or more", CellStyle.Bold));
+                excelRow.Add("D", new Cell("differences compared to", CellStyle.Bold));
+                excelRow.Add("E", new Cell(recon.SecondQuery, CellStyle.Bold));
+                excelService.AddRow(excelRow);
+            }
+            // Now write out the common columns at the left of each section
+            // If a 1 query recon then we don't need extra columns and should add the header row as is
+            currColumnIndex = writeCommonHeaders(numQueries, recon.Columns, recon.SecondQuery == "", false);
+            if (recon.SecondQuery != "")
+            {
+                // We have to add three more columns: one to list the item the differences was found in, and then
+                // two columns to show the two values found.
+                excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell("Column", CellStyle.DarkBlueBold));
+                excelRow.Add(columnLetters[currColumnIndex + 1].ToString(), new Cell("1st Query Value", CellStyle.DarkBlueBold));
+                excelRow.Add(columnLetters[currColumnIndex + 2].ToString(), new Cell("2nd Query Value", CellStyle.DarkBlueBold));
+                excelService.AddRow(excelRow);
+            }
+            // Now go through the queries and write one row per row returned in the case of 1-query recons or one row
+            // per difference found in the case of 2-query recons
+            if (recon.SecondQuery == "")
+            {
+                // Write out rows for 1-query recons
+                if (firstQueryData.Rows.Count == 0)
+                {
+                    excelRow = new Dictionary<string, Cell>();
+                    excelRow.Add("A", new Cell("No problems found", CellStyle.Bold));
+                    excelService.AddRow(excelRow);
+                }
+                else
+                {
+                    // Write a summary row with number of problems found
+                    foreach (DataRow row in firstQueryData.Rows)
+                    {
+                        excelRow = new Dictionary<string, Cell>();
+                        currStyle = toggleStyle(currStyle);
+                        // Always show all columns on a 1-query recon
+                        for (int n = 0; n < recon.Columns.Count; n++)
+                        {
+                            excelRow.Add(columnLetters[n].ToString(), new Cell(row[recon.Columns[n].FirstQueryName].ToString(), currStyle));
+                        }
+                        excelService.AddRow(excelRow);
+                    }
+                    counterText = string.Format("{0} {1} found.", firstQueryData.Rows.Count, firstQueryData.Rows.Count == 1 ? "problem" : "problems");
+                    excelRow.Clear();
+                    excelRow.Add("A", new Cell(counterText));
+                    excelService.AddRow(excelRow);                }
+            }
+            else
+            {   // Write out rows for 2-query recons
+                foreach (string rowKey in q1Rows.Keys)
+                {
+                    if (q2Rows.ContainsKey(rowKey))
+                    {
+                        // Toggle background color of the row being written
+                        currStyle = toggleStyle(currStyle);
+                        // Get the two matched rows and see if any of their columns that should match
+                        // actually have any differences that need to be reported.
+                        foreach (QueryColumn column in recon.Columns)
+                        {
+                            if (column.ShouldMatch)
+                            {
+                                if (!valuesMatch(q1Rows[rowKey][column.FirstQueryName], q2Rows[rowKey][column.SecondQueryName], column.Type))
+                                {
+                                    // We have a mismatch that needs to be reported
+                                    // First, write the identifying and 'Always Display' columns, and get the column index we're at
+                                    currColumnIndex = writeDiffRowCommonColumns(q1Rows[rowKey], q2Rows[rowKey], recon.Columns, currStyle);
+                                    // Now write out the three columns regarding the difference found: 
+                                    //      column name, first query value, and second query value
+                                    excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(column.Label, currStyle));
+                                    excelRow.Add(columnLetters[currColumnIndex + 1].ToString(), new Cell(q1Rows[rowKey][column.FirstQueryName].ToString(), currStyle));
+                                    excelRow.Add(columnLetters[currColumnIndex + 2].ToString(), new Cell(q2Rows[rowKey][column.SecondQueryName].ToString(), currStyle));
+                                    // Finally, add this row to the recon report
+                                    excelService.AddRow(excelRow);
+                                    ++numDifferencesFound;
+                                }
+                            }
+                        }
+                    }
+                }
+                // If no differences were found, write one row to that effect
+                if (numDifferencesFound == 0)
+                {
+                    excelRow = new Dictionary<string, Cell>();
+                    excelRow.Add("A", new Cell("No differences found", CellStyle.Bold));
+                    excelService.AddRow(excelRow);
+                }
+                else
+                {
+                    excelRow.Clear();
+                    if (numDifferencesFound == 1)
+                    {
+                        counterText = numDifferencesFound.ToString() + " difference found.";
+                    }
+                    else
+                    {
+                        counterText = numDifferencesFound.ToString() + " differences found.";
+                    }
+                    excelRow.Add("A", new Cell(counterText));
+                    excelService.AddRow(excelRow);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Will return true if the two values match.
+        /// </summary>
+        /// <param name="value1"></param>
+        /// <param name="value2"></param>
+        /// <param name="type">The ColumnType of these values</param>
+        /// <returns></returns>
+        private bool valuesMatch(object value1, object value2, ColumnType type)
+        {
+            // If only one value is null, return false
+            if ((value1 == System.DBNull.Value && value2 != System.DBNull.Value) || (value1 != System.DBNull.Value && value2 == System.DBNull.Value))
+            {
+                return false;
+            }
+
+            // If both values are null, return true
+            if (value1 == System.DBNull.Value && value2 == System.DBNull.Value)
+            {
+                return true;
+            }
+
+            // Neither value is null, so compare them based on what type they should be
+            // If either one fails to parse as the proper value type, then return false
+            switch (type) 
+            {
+                case ColumnType.date:
+                    DateTime q1DateTime;
+                    DateTime q2DateTime;
+                    if (!DateTime.TryParse(value1.ToString(), out q1DateTime) || 
+                        !DateTime.TryParse(value2.ToString(), out q2DateTime))
+                    {
+                        return false;
+                    }
+                    if (q1DateTime == q2DateTime) {
+                        return true;
+                    }
+                    break;
+                case ColumnType.number:
+                    float q1Float;
+                    float q2Float;
+                    if (!float.TryParse(value1.ToString(), out q1Float) ||
+                        !float.TryParse(value2.ToString(), out q2Float))
+                    {
+                        return false;
+                    }
+                    if (q1Float == q2Float) {
+                        return true;
+                    }
+                    break;
+                case ColumnType.text:
+                    if (value1.ToString() == value2.ToString()) {
+                        return true;
+                    }
+                    break;
+            }
+            return false;
+        }
+        
+        /// <summary>
+        /// Write out the columns we must display for this row.
+        /// </summary>
+        /// <param name="row"></param>
+        /// <param name="recon"></param>
+        /// <param name="formatType">What CellFormatType to use for the cell</param>
+        private void writeRowCommonColumns(DataRow row, List<QueryColumn> columns, reportSection section, CellStyle formatType)
+        {
+            QueryColumn queryColumn;
+            excelRow = new Dictionary<string, Cell>();
+            string columnName;
+            int currColumnIndex = 0;
+
+            // Write out identifying columns
+            for (int i = 0; i < columns.Count; i++)
+            {
+                queryColumn = columns[i];
+                if (queryColumn.IdentifyingColumn)
+                {
+                    if (section == reportSection.FirstQueryRowWithoutMatch)
+                    {
+                        columnName = queryColumn.FirstQueryName;
+                    }
+                    else
+                    {
+                        columnName = queryColumn.SecondQueryName;
+                    }
+                    excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(row[columnName].ToString(), formatType));
+                    ++currColumnIndex;
+                }
+            }
+            // Write out columns marked AlwaysDisplay (that aren't also identifying columns).  
+            for (int i = 0; i < columns.Count; i++)
+            {
+                queryColumn = columns[i];
+                if ((queryColumn.AlwaysDisplay || queryColumn.ShouldMatch) && !queryColumn.IdentifyingColumn)
+                {
+                    if (section == reportSection.FirstQueryRowWithoutMatch)
+                    {
+                        columnName = queryColumn.FirstQueryName;
+                    }
+                    else
+                    {
+                        columnName = queryColumn.SecondQueryName;
+                    }
+                    // Some columns marked 'AlwaysDisplay' may not exist on one of the two queries
+                    if (columnName != null)
+                    {
+                        excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(row[columnName].ToString(), formatType));
+                    }
+                    else
+                    {
+                        excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell("", formatType));
+                    }
+                    ++currColumnIndex;
+                }
+            }
+            excelService.AddRow(excelRow);
+        }
+
+        /// <summary>
+        /// Write out the columns we must display for this row.
+        /// </summary>
+        /// <param name="row"></param>
+        /// <param name="recon"></param>
+        /// <param name="formatType">What CellFormatType to use for the cell</param>
+        private int writeDiffRowCommonColumns(DataRow q1Row, DataRow q2Row, List<QueryColumn> columns, CellStyle formatType)
+        {
+            QueryColumn queryColumn;
+            excelRow = new Dictionary<string, Cell>();
+            string columnValue;
+            int currColumnIndex = 0;
+
+            // Write out identifying columns
+            for (int i = 0; i < columns.Count; i++)
+            {
+                queryColumn = columns[i];
+                if (queryColumn.IdentifyingColumn)
+                {
+                    excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(q1Row[queryColumn.FirstQueryName].ToString(), formatType));
+                    ++currColumnIndex;
+                }
+            }
+            // Write out columns marked AlwaysDisplay (that aren't also identifying columns).  
+            for (int i = 0; i < columns.Count; i++)
+            {
+                queryColumn = columns[i];
+                if (queryColumn.AlwaysDisplay && !queryColumn.IdentifyingColumn)
+                {
+                    // Some columns marked 'AlwaysDisplay' may not exist on one of the two queries.
+                    // Use value on first query if it exists on either the first query or both, otherwise use
+                    // the value in the second query.
+                    if (queryColumn.FirstQueryName != null)
+                    {
+                        columnValue = q1Row[queryColumn.FirstQueryName].ToString();
+                    }
+                    else
+                    {
+                        columnValue = q2Row[queryColumn.SecondQueryName].ToString();
+                    }
+                    excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(columnValue, formatType));
+                    ++currColumnIndex;
+                }
+            }
+            return currColumnIndex;
+        }
+
+        /// <summary>
+        /// This writes out header columns for all columns of the recon that will be displayed regardless
+        /// of what section of the recon we're showing.  If a single query recon write all columns, else
+        /// only display columns as needed
+        /// </summary>
+        /// <param name="numQueries">Number of queries in the recon.  Either 1 or 2.</param>
+        /// <param name="columns">Collection of columns to beused</param>
+        /// <param name="addRow">set to true to add row to spreadsheet and move to next row</param>
+        /// <param name="showShouldMatchColumns">Set to true to show all ShouldMatch column names in the header. 
+        /// (This will be true for the "orphan" report sections, and false for the data differences section.</param>
+        /// <returns>
+        /// An integer with the value of the currColumnIndex, in case the caller needs to tack additional
+        /// columns after these before adding the row to the worksheet.
+        /// </returns>
+        private int writeCommonHeaders(int numQueries, List<QueryColumn> columns, bool addRow, bool showShouldMatchColumns)
+        {
+            int currColumnIndex = 0;
+            QueryColumn queryColumn;
+            excelRow = new Dictionary<string, Cell>();
+            string columnAttribute;
+            
+            for (int i = 0; i < columns.Count; i++)
+            {
+                queryColumn = columns[i];
+                if (queryColumn.IdentifyingColumn || numQueries == 1)
+                {
+                    var idAnnotation = numQueries == 1 ? string.Empty : " (Id)";
+                    excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(queryColumn.Label + idAnnotation, CellStyle.DarkBlueBold));
+                    ++currColumnIndex;
+                }
+            }
+            // Write out columns marked AlwaysDisplay.  
+            // Yes this is a second iteration through the same set of columns, but we want to make sure all
+            // identifying columns precede all columns marked 'AlwaysDisplay' even if they are not in proper order
+            // in the collection
+            if (numQueries == 2) /**** RESUME HERE 18-JULY ***/
+            for (int i = 0; i < columns.Count; i++)
+            {
+                queryColumn = columns[i];
+                if ((queryColumn.AlwaysDisplay || (queryColumn.ShouldMatch && showShouldMatchColumns)) && !queryColumn.IdentifyingColumn)
+                {
+                    // Let the user know if this column is found in just the first
+                    // query (1) or just the second query (2)
+                    if (queryColumn.FirstQueryName != null && queryColumn.SecondQueryName != null)
+                    {
+                        if (queryColumn.ShouldMatch)
+                        {
+                            columnAttribute = "(M)";
+                        }
+                        else
+                        {
+                            columnAttribute = "";
+                        }
+                    }
+                    else
+                    {
+                        if (queryColumn.FirstQueryName == null)
+                        {
+                            columnAttribute = "(2)";
+                        }
+                        else
+                        {
+                            columnAttribute = "(1)";
+                        }
+                    }
+                    excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(queryColumn.Label + " " + columnAttribute, CellStyle.DarkBlueBold));
+                    ++currColumnIndex;                
+                }
+            }
+
+            if (addRow)
+            {
+                excelService.AddRow(excelRow);
+            }
+            return currColumnIndex;
+        }
+
+        /// <summary>
+        /// Write the title and subtitle rows plus a blank row to the current worksheet. 
+        /// Header rows will vary based on whether this is a one or two query recon.
+        /// </summary>
+        /// <param name="recon">The recon report we're processing</param>
+        private void writeWorkSheetHeaderRows(ReconReport recon)
+        {
+            // Main title
+            excelRow = new Dictionary<string, Cell>();
+            excelRow.Add("A", new Cell(recon.Name, CellStyle.Bold));
+            excelService.AddRow(excelRow);
+            // Sub-title row with names of queries
+            excelRow.Clear();
+            if (recon.SecondQuery != "")
+            {
+                excelRow.Add("A", new Cell("Comparing"));
+                excelRow.Add("B", new Cell(recon.FirstQuery));
+                excelRow.Add("C", new Cell("to"));
+                excelRow.Add("D", new Cell(recon.SecondQuery));
+            }
+            else
+            {
+                excelRow.Add("A", new Cell("Rows returned by"));
+                excelRow.Add("B", new Cell(recon.FirstQuery));
+            }
+            excelService.AddRow(excelRow);
+            // Write row with query variable values
+            excelRow.Clear();
+            excelRow.Add("A", new Cell("Query variables:"));
+            var currColumnIndex = 1;
+            if (recon.QueryVariables.Count > 0)
+            {
+                recon.QueryVariables.ForEach(queryVar =>
+                    {
+                        var currColumn = columnLetters[currColumnIndex].ToString();
+                        excelRow.Add(currColumn, new Cell(string.Format("{0}: {1}", queryVar.SubName, queryVar.SubValue)));
+                        ++currColumnIndex;
+                    });
+            }
+            else
+                excelRow.Add("B", new Cell("None"));
+            excelService.AddRow(excelRow);
+
+            // Sub-title row with key to column header names
+            // Only add if two-query recon
+            if (recon.SecondQuery != "")
+            {
+                excelRow.Clear();
+                excelRow.Add("A", new Cell("(Id) = Part of Unique ID", CellStyle.Italic));
+                excelRow.Add("B", new Cell("(1) = Found in 1st Query only", CellStyle.Italic));
+                excelRow.Add("C", new Cell("(2) = Found in 2nd Query only", CellStyle.Italic));
+                excelRow.Add("D", new Cell("(M) = Matched Column", CellStyle.Italic));
+                excelService.AddRow(excelRow);
+            }
+            // Spacer row
+            excelService.AddBlankRow();
+        }
+
+        /// <summary>
+        /// Returns true if sources and recons objects have been loaded and validate is passed, otherwise false
+        /// </summary>
+        /// <returns></returns>
+        public bool ReadyToRun()
+        {
+            if (sources.Queries.Count > 0 && recons.ReconList.Count > 0 && IsValid())
+                return true;
+            else
+                return false;
+        }
+
+        private bool IsValid()
+        {
+            var validationIssues = getValidationIssues();
+            if (validationIssues.Count > 0)
+                return false;
+            else
+                return true;
+        }
+
+        /// <summary>
+        /// Perform various validation checks and return results. Can be considered
+        /// ready to go if validation issues list is empty.
+        /// </summary>
+        /// <returns></returns>
+        private List<string> getValidationIssues()
+        {
+            // TODO Implement validation logic
+            return new List<string>();
+        }
+
+        /// <summary>
+        /// If inner exception exists will append that message to top level exception message,
+        /// else just returns top level exception message. Calls itself recursively in case
+        /// there are >2 layers of exceptions.
+        /// </summary>
+        /// <param name="ex"></param>
+        /// <returns></returns>
+        private string getFullErrorMessage(Exception ex)
+        {
+            if (ex.InnerException != null)
+                return (string.Format("{0}: {1}", ex.Message, getFullErrorMessage(ex.InnerException)));
+            else
+                return ex.Message;
+        }
+    }
+}
