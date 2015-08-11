@@ -6,7 +6,7 @@ using System.Xml.Serialization;
 
 namespace ReconRunner.Model
 {
-    #region RRSources
+    #region Sources
 
     #region Variable
 
@@ -25,6 +25,8 @@ namespace ReconRunner.Model
     {
         string subName;
         string subValue;
+        bool querySpecific;
+        int queryNumber;
 
         [XmlAttribute("SubName")]
         public string SubName
@@ -38,6 +40,27 @@ namespace ReconRunner.Model
         {
             get { return subValue; }
             set { subValue = value; }
+        }
+        /// <summary>
+        /// Set to true if the variable should be unique for each query.  False means
+        /// use the same value for both queries (if used by both)
+        /// </summary>
+        [XmlAttribute("QuerySpecific")]
+        public bool QuerySpecific
+        {
+            get { return querySpecific; }
+            set { querySpecific = value; }
+        }
+
+        /// <summary>
+        /// For QuerySpecific variables, indicates which query it applies to. (1 or 2)
+        /// Ignored if QuerySpecific = false
+        /// </summary>
+        [XmlAttribute("QueryNumber")]
+        public int QueryNumber
+        {
+            get { return queryNumber; }
+            set { queryNumber = value; }
         }
     }
     #endregion Variable
@@ -71,11 +94,15 @@ namespace ReconRunner.Model
         /// <summary>
         /// Supply a SQL statement with one or more optional pipe-delimited variables to be specified at run time.
         /// </summary>
-        [XmlAttribute ("SQL")]
-        public string SQL
+        [XmlElement ("SQL")]
+        public XmlCDataSection SQL
         {
-            get { return sql; }
-            set { sql = value; }
+            get
+            {
+                XmlDocument doc = new XmlDocument();
+                return doc.CreateCDataSection(sql);
+            }
+            set { sql = value.Value; }
         }
     }
     #endregion RRQuery
@@ -157,8 +184,8 @@ namespace ReconRunner.Model
 
     #endregion RRConnectionString and collection
 
-    [XmlRoot("RRSources")]
-    public class RRSources
+    [XmlRoot("Sources")]
+    public class Sources
     {
         private List<ConnectionStringTemplate> csTemplates = new List<ConnectionStringTemplate>();
         private List<RRConnectionString> connStrings = new List<RRConnectionString>();
@@ -186,9 +213,9 @@ namespace ReconRunner.Model
         }
     }
 
-    #endregion RRSources
+    #endregion Sources
 
-    #region RRReports
+    #region Reports
 
     #region ColumnType
     public enum ColumnType
@@ -409,5 +436,5 @@ namespace ReconRunner.Model
 
     }
 
-    #endregion RRReports
+    #endregion Reports
 }

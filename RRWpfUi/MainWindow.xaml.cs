@@ -1,7 +1,8 @@
 ﻿using System.Windows;
+using System.Collections.Generic;
 using ReconRunner.Controller;
 using System.Windows.Forms;
-
+using System;
 
 namespace RRWpfUi
 {
@@ -10,6 +11,7 @@ namespace RRWpfUi
     /// </summary>
     public partial class MainWindow : Window
     {
+        private string cr = "\r\n";
         private RRController rrController = RRController.Instance;
 
         public MainWindow()
@@ -25,14 +27,14 @@ namespace RRWpfUi
 
             if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
             {
-                txtStatus.Text += "Reading sources from file " + xmlFileOpenDialog.FileName + ".\r\n\r\n";
-                txtStatus.Text += rrController.ReadSourcesFromXMLFile(xmlFileOpenDialog.FileName);
-                txtStatus.Text += "\r\n\r\n";
+                txtStatus.Text += string.Format("Reading sources from file {0}.{1}", xmlFileOpenDialog.FileName, cr);
+                txtStatus.Text += rrController.ReadSourcesFromXMLFile(xmlFileOpenDialog.FileName) + cr;
                 btnRunRecons.IsEnabled = rrController.ReadyToRun();
+                btnValidate.IsEnabled = !btnRunRecons.IsEnabled;
             }
             else
             {
-                txtStatus.Text += "Creation of Sources collection cancelled.\r\n\r\n";
+                txtStatus.Text += "Creation of Sources collection cancelled." + cr;
                 btnRunRecons.IsEnabled = false;
             }
         }
@@ -44,14 +46,14 @@ namespace RRWpfUi
 
             if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
             {
-                txtStatus.Text += "Reading recons from file " + xmlFileOpenDialog.FileName + ".\r\n\r\n";
-                txtStatus.Text += rrController.ReadReconsFromXMLFile(xmlFileOpenDialog.FileName);
-                txtStatus.Text += "\r\n\r\n";
+                txtStatus.Text += string.Format("Reading recons from file {0}.{1}", xmlFileOpenDialog.FileName, cr);
+                txtStatus.Text += rrController.ReadReconsFromXMLFile(xmlFileOpenDialog.FileName) + cr;
                 btnRunRecons.IsEnabled = rrController.ReadyToRun();
+                btnValidate.IsEnabled = !btnRunRecons.IsEnabled;
             }
             else
             {
-                txtStatus.Text += "Creation of Recon collection cancelled.\r\n\r\n";
+                txtStatus.Text += "Creation of Recon collection cancelled." + cr;
                 btnRunRecons.IsEnabled = false;
             }
 
@@ -59,57 +61,98 @@ namespace RRWpfUi
 
         private void btnRunRecons_Click(object sender, RoutedEventArgs e)
         {
-            var fileSaveDialog = getFileSaveDialog("Save recon results to spreadsheet");
-            fileSaveDialog.DefaultExt = "xls";
-            fileSaveDialog.Filter = "XLS Files|*.xls|All files|*.*";
-            DialogResult excelFile = fileSaveDialog.ShowDialog();
+            try
+            {
+                var fileSaveDialog = getFileSaveDialog("Save recon results to spreadsheet");
+                fileSaveDialog.DefaultExt = "xls";
+                fileSaveDialog.Filter = "XLS Files|*.xls|All files|*.*";
+                DialogResult excelFile = fileSaveDialog.ShowDialog();
 
-            if (excelFile != System.Windows.Forms.DialogResult.Cancel)
-            {
-                txtStatus.Text += "Processing recon reports and creating " + fileSaveDialog.FileName + ".\r\n\r\n";
-                string results = rrController.RunRecons(fileSaveDialog.FileName);
-                txtStatus.Text += results + "\r\n\r\n";
+                if (excelFile != System.Windows.Forms.DialogResult.Cancel)
+                {
+                    txtStatus.Text += string.Format("Processing recon reports and creating {0}.{1}", fileSaveDialog.FileName, cr);
+                    string results = rrController.RunRecons(fileSaveDialog.FileName);
+                }
+                else
+                {
+                    txtStatus.Text += "Creation of Recon report Excel file cancelled." + cr;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                txtStatus.Text += "Creation of Recon report Excel file cancelled.\r\n\r\n";
+                var fullErrorMessage = rrController.GetFullErrorMessage(ex);
+               txtStatus.Text += string.Format("Error while creating samples: {0}{1}", cr, fullErrorMessage);
             }
         }
 
+
         private void btnCreateSamples_Click(object sender, RoutedEventArgs e)
         {
-            // Save sources
-            var fileSaveDialog = getFileSaveDialog("Save sources to file");
-            fileSaveDialog.Title = "Save Sources";
-            DialogResult xmlFile = fileSaveDialog.ShowDialog();
-
-            if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
+            try
             {
-                txtStatus.Text += "Writing sources to file " + fileSaveDialog.FileName + ".\r\n\r\n";
-                rrController.CreateSampleXMLSourcesFile(fileSaveDialog.FileName);
-                txtStatus.Text += "Sources XML file created.\r\n\r\n";
+                // Save sources
+                var fileSaveDialog = getFileSaveDialog("Save sources to file");
+                fileSaveDialog.Title = "Save Sources";
+                DialogResult xmlFile = fileSaveDialog.ShowDialog();
+
+                if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
+                {
+                    txtStatus.Text += string.Format("Writing sources to file {0}.{1}",fileSaveDialog.FileName, cr);
+                    rrController.CreateSampleXMLSourcesFile(fileSaveDialog.FileName);
+                    txtStatus.Text += "Sources XML file created." + cr;
+                }
+                else
+                {
+                    txtStatus.Text += "Creation of Sources XML file cancelled." + cr;
+                }
+
+                // Save recons
+                fileSaveDialog = getFileSaveDialog("Save recons to file");
+                fileSaveDialog.Title = "Save Recons";
+                xmlFile = fileSaveDialog.ShowDialog();
+
+                if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
+                {
+                    txtStatus.Text += string.Format("Writing recons to file {0}.{1}", fileSaveDialog.FileName, cr);
+                    rrController.CreateSampleXMLReconReportFile(fileSaveDialog.FileName);
+                    txtStatus.Text += "Recons XML file created." + cr;
+                }
+                else
+                {
+                    txtStatus.Text += "Creation of Recons XML file cancelled." + cr;
+                }
             }
+            catch (Exception ex)
+            {
+                var fullErrorMessage = rrController.GetFullErrorMessage(ex);
+                txtStatus.Text += string.Format("Error while creating samples: {0}{1}", cr,fullErrorMessage);
+            }
+        }
+
+
+        private void btnValidate_Click(object sender, RoutedEventArgs e)
+        {
+            reportValidationIssues();
+        }
+
+
+        /// <summary>
+        /// Write out any validation errors. If no errors are found then also check
+        /// for warnings and report any of those.
+        /// </summary>
+        private void reportValidationIssues()
+        {
+            txtStatus.Text += "Starting validation..." + cr;
+            var validationMessages = new List<string>();
+            validationMessages.AddRange(rrController.GetValidationErrors());
+            validationMessages.AddRange(rrController.GetValidationWarnings());
+            if (validationMessages.Count == 0)
+                txtStatus.Text += "No validation errors or warnings found." + cr;
             else
             {
-                txtStatus.Text += "Creation of Sources XML file cancelled.\r\n\r\n";
+                validationMessages.ForEach(message => txtStatus.Text += message + cr);
+                txtStatus.Text += "Done." + cr;
             }
-
-            // Save recons
-            fileSaveDialog = getFileSaveDialog("Save recons to file");
-            fileSaveDialog.Title = "Save Recons";
-            xmlFile = fileSaveDialog.ShowDialog();
-
-            if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
-            {
-                txtStatus.Text += "Writing recons to file " + fileSaveDialog.FileName + ".\r\n\r\n";
-                rrController.CreateSampleXMLReconReportFile(fileSaveDialog.FileName);
-                txtStatus.Text += "Recons XML file created.\r\n\r\n";
-            }
-            else
-            {
-                txtStatus.Text += "Creation of Recons XML file cancelled.\r\n\r\n";
-            }
-
         }
         #endregion Button Click Methods
 
@@ -144,6 +187,6 @@ namespace RRWpfUi
                 fileOpenDialog.Title = dialogTitle;
             return fileOpenDialog;
         }
-        #endregion Dialogs
+        #endregion Dialogs  
     }
 }

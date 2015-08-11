@@ -16,13 +16,13 @@ namespace ReconRunner.Model
         private static RRDataService instance = new RRDataService();
         public static RRDataService Instance { get { return instance; } }
 
-        private RRSources sources;
+        private Sources sources;
         // A set of open connections available for use
         // Use OpenConnections() and CloseConnections() to manage them for a given recon
         // Note connections can be of type TdConnection (for Teradata) or OleDbConnection (for anything else)
         private Dictionary<string, DbConnection> openConnections = new Dictionary<string, DbConnection>();
 
-       public RRSources Sources
+       public Sources Sources
         {
             get { return sources; }
             set { sources = value; }
@@ -82,7 +82,7 @@ namespace ReconRunner.Model
             // Get the connection for the query.     
             var firstQueryDbConn = openConnections.Single(conn => conn.Key == query.ConnStringName).Value;
             // Get the query's sql and perf
-            var firstQuerySql = buildQuerySql(queryVariables, query.SQL);
+            var firstQuerySql = buildQuerySql(queryVariables, query.SQL.Value);
             var connType = firstQueryDbConn.GetType();
             if (connType.Name == "OleDbConnection")
             {

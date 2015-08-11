@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Xml;
 using System.Xml.Serialization;
 
 namespace ReconRunner.Model
@@ -10,7 +11,7 @@ namespace ReconRunner.Model
     {
         #region Sample builder
         private Recons sampleRecons;
-        private RRSources sampleRRSources;
+        private Sources sampleRRSources;
 
         public RRSerializer()
         {
@@ -19,74 +20,190 @@ namespace ReconRunner.Model
 
         private void populateSampleReconObjects()
         {
-            sampleRRSources = new RRSources();
+            sampleRRSources = new Sources();
             sampleRecons = new Recons();
-            // Create sample objects to use to populate sample RRSources and RRReports XML files
+            // Create sample objects to use to populate sample Sources and RRReports XML files
             // for user to use as basis for real recons.
 
             // Create RRSourcesSample.xml
             // Contains sample connection template, connection, and query objects in SampleRRSources
             // Sample Connection String Templates
+            var sqlServerTemplate = new ConnectionStringTemplate();
+            sqlServerTemplate.Name = "SQL Server";
+            sqlServerTemplate.Template = "Server=|ServerName|;Database=|DatabaseName|;Trusted_Connection=True";
             var teradataTemplate = new ConnectionStringTemplate();
             teradataTemplate.Name = "Teradata";
             teradataTemplate.Template = "Data Source=|ServerName|;User ID=|User|;Password=|Password|;Session Mode=TERADATA;";
             var oracleTemplate = new ConnectionStringTemplate();
             oracleTemplate.Name = "Oracle";
             oracleTemplate.Template = "Provider=MSDAORA.1;Data Source=|TNSName|;User Id=|User|;Password=|Password|;Persist Security Info=false;";
+            sampleRRSources.ConnStringTemplates.Add(sqlServerTemplate);
             sampleRRSources.ConnStringTemplates.Add(teradataTemplate);
             sampleRRSources.ConnStringTemplates.Add(oracleTemplate);
 
             // Sample Connection Strings
+            var warehouseConnectionString = new RRConnectionString();
+            warehouseConnectionString.Name = "DataWarehouse Dev";
+            warehouseConnectionString.TemplateName = "SQL Server";
+            warehouseConnectionString.DatabaseType = DatabaseType.SQLServer;
+            warehouseConnectionString.TemplateVariables = new List<Variable>
+            {
+                new Variable {SubName="ServerName", SubValue="bos-dbdevwh02"},
+                new Variable {SubName="DatabaseName", SubValue="DataWarehouse" }
+            };
             var dalUatConnectionString = new RRConnectionString();
             dalUatConnectionString.Name = "Teradata UAT";
             dalUatConnectionString.TemplateName = "Teradata";
             dalUatConnectionString.DatabaseType = DatabaseType.Teradata;
-            dalUatConnectionString.TemplateVariables = new List<Variable>{
-                                                                                    new Variable {SubName="ServerName", SubValue="tddevbos"}, 
-                                                                                    new Variable {SubName="User", SubValue="DAL_READ"}, 
-                                                                                    new Variable {SubName="Password", SubValue="DAL_READ"}
-                                                                              };
+            dalUatConnectionString.TemplateVariables = new List<Variable>
+            {
+                new Variable {SubName="ServerName", SubValue="tddevbos"}, 
+                new Variable {SubName="User", SubValue="DAL_READ"}, 
+                new Variable {SubName="Password", SubValue="DAL_READ"}
+            };
 
             var edmUatConnectionString = new RRConnectionString();
             edmUatConnectionString.Name = "EDM UAT";
             edmUatConnectionString.TemplateName = "Oracle";
             edmUatConnectionString.DatabaseType = DatabaseType.Oracle;
-            edmUatConnectionString.TemplateVariables = new List<Variable>{
-                                                                            new Variable {SubName="TNSName", SubValue="EDM_T"}, 
-                                                                            new Variable {SubName="User", SubValue="edm_read"}, 
-                                                                            new Variable {SubName="Password", SubValue="edm_read"}
-                                                                         };
+            edmUatConnectionString.TemplateVariables = new List<Variable>
+            {
+                new Variable {SubName="TNSName", SubValue="EDM_T"}, 
+                new Variable {SubName="User", SubValue="edm_read"}, 
+                new Variable {SubName="Password", SubValue="edm_read"}
+            };
             sampleRRSources.ConnectionStrings.Add(dalUatConnectionString);
             sampleRRSources.ConnectionStrings.Add(edmUatConnectionString);
 
             // Sample Queries
+            var doc = new XmlDocument();
+            var warehouseQuery = new RRQuery();
+            warehouseQuery.Name = "PortGicsSectorDetails";
+            warehouseQuery.ConnStringName = "DataWarehouse Dev";
+            warehouseQuery.SQL = doc.CreateCDataSection(@"with latestAttrInsEffDate as 
+                                                            (
+	                                                            select
+		                                                            atins_id,
+		                                                            max(effect_date) LatestRowDate
+	                                                            from warehouse.attr_instrument
+	                                                            where effect_date <= '|DateWanted|'
+	                                                            group by atins_id
+                                                            ),
+                                                            latestAttrIns as
+                                                            (
+	                                                            select
+		                                                            laied.atins_id,
+		                                                            laied.LatestRowDate,
+		                                                            max(ai.atins_release_number) LatestReleaseNumber
+	                                                            from latestAttrInsEffDate laied
+	                                                            join warehouse.attr_instrument ai
+	                                                            on laied.atins_id = ai.atins_id
+	                                                            and laied.LatestRowDate = ai.effect_date
+	                                                            group by laied.atins_id, laied.LatestRowDate)
+                                                            select 
+	                                                            bigs.atptf_id,
+	                                                            p.portf_name,
+	                                                            bigs.calcul_date,
+	                                                            bigs.atins_id,
+	                                                            ai.atins_name,
+	                                                            ai.effect_date,
+	                                                            ai.end_valid_date
+                                                            from warehouse.bisamattributions_gics_sec bigs
+                                                            join warehouse.portfolio p
+                                                            on  bigs.atptf_id = |PortId| 
+                                                            and bigs.atins_id <> 0
+                                                            and bigs.calcul_date = '|DateWanted|'
+                                                            and bigs.dateinactive = '31-dec-9999'
+                                                            and bigs.atptf_id = p.portf_id
+                                                            join latestAttrIns lai
+                                                            on bigs.atins_id = lai.atins_id
+                                                            join warehouse.attr_instrument ai
+                                                            on lai.atins_id = ai.atins_id
+                                                            and lai.LatestRowDate = ai.effect_date
+                                                            and lai.LatestReleaseNumber = ai.ATINS_RELEASE_NUMBER
+                                                            order by atins_name");
             var edmQuery = new RRQuery();
             edmQuery.Name = "EdmProductDayPositions";
             edmQuery.ConnStringName = "EDM UAT";
-            edmQuery.SQL = @"select fm.snapshot_id, trim(fm.entity_id) entity_id, pd.security_alias, trim(pd.long_short_indicator) long_short_indicator, pd.market_value_base, pd.market_value_local from datamartdbo.fund_master fm join datamartdbo.position_details pd on fm.entity_id = '|ProductId|' and fm.effective_date = '|EdmDateWanted|' and fm.dmart_fund_id = pd.dmart_fund_id";
+            edmQuery.SQL = doc.CreateCDataSection("select fm.snapshot_id, trim(fm.entity_id) entity_id, pd.security_alias, trim(pd.long_short_indicator) long_short_indicator, pd.market_value_base, pd.market_value_local from datamartdbo.fund_master fm join datamartdbo.position_details pd on fm.entity_id = '|ProductId|' and fm.effective_date = '|EdmDateWanted|' and fm.dmart_fund_id = pd.dmart_fund_id");
             var teraQuery = new RRQuery();
             teraQuery.Name = "DalProductDayPositions";
             teraQuery.ConnStringName = "Teradata UAT";
-            teraQuery.SQL = @"select fp.snapshotid, dp.productid, dp.entitylongname, fp.OrigSecurityId, fp.LongShortIndicator, fp.marketvaluebase, fp.marketvaluelocal from dimproduct dp join factposition fp on dp.productid = '|ProductId|' and dp.dimproductid = fp.dimproductid and fp.dimtimeid = |DalDateWanted|";
+            teraQuery.SQL = doc.CreateCDataSection("select fp.snapshotid, dp.productid, dp.entitylongname, fp.OrigSecurityId, fp.LongShortIndicator, fp.marketvaluebase, fp.marketvaluelocal from dimproduct dp join factposition fp on dp.productid = '|ProductId|' and dp.dimproductid = fp.dimproductid and fp.dimtimeid = |DalDateWanted|");
             var posFkQuery = new RRQuery();
             posFkQuery.Name = "DalPositionsMissingFk";
             posFkQuery.ConnStringName = "Teradata UAT";
-            posFkQuery.SQL = @"select * from (select dimtimeid,  case when dimsecurityid = 'UNKNOWN' and dimproductid = 'UNKNOWN' then 'BOTH' when dimsecurityid = 'UNKNOWN' then 'SECURITY' else 'PRODUCT' end MissingEntity, case when dimsecurityid = 'UNKNOWN' and dimproductid = 'UNKNOWN' then 'Security ID: ' || OrigSecurityId || '; Product ID: ' || OrigProductId when dimsecurityid = 'UNKNOWN' then OrigSecurityId else OrigProductId end MissingEntityId from factposition where (dimsecurityid = 'UNKNOWN' or dimproductid = 'UNKNOWN') and dimtimeid >= 1131101) data group by MissingEntity, MissingEntityId, DimTimeId order by MissingEntity, MissingEntityId, DimTimeId";
+            posFkQuery.SQL = doc.CreateCDataSection("select * from (select dimtimeid,  case when dimsecurityid = 'UNKNOWN' and dimproductid = 'UNKNOWN' then 'BOTH' when dimsecurityid = 'UNKNOWN' then 'SECURITY' else 'PRODUCT' end MissingEntity, case when dimsecurityid = 'UNKNOWN' and dimproductid = 'UNKNOWN' then 'Security ID: ' || OrigSecurityId || '; Product ID: ' || OrigProductId when dimsecurityid = 'UNKNOWN' then OrigSecurityId else OrigProductId end MissingEntityId from factposition where (dimsecurityid = 'UNKNOWN' or dimproductid = 'UNKNOWN') and dimtimeid >= 1131101) data group by MissingEntity, MissingEntityId, DimTimeId order by MissingEntity, MissingEntityId, DimTimeId");
+            sampleRRSources.Queries.Add(warehouseQuery);
             sampleRRSources.Queries.Add(edmQuery);
             sampleRRSources.Queries.Add(teraQuery);
             sampleRRSources.Queries.Add(posFkQuery);
-            
+
             // Create RRReportsSample.xml
             // Holds sample recon report definitions along with substitution values to use
             // in sample queries.
             // first recon report and write to file to create file to use as basis to create
             // full XML file specifying all the recon reports to run.
 
-            /* ****** RESUME TOMORROW: Add collection of VARIABLE values for queries.  
-             *        Adapt sample recon report to use new RRSources definitions as above
-             *        Test creation of sample XML files. */
+            // First two recons are examples of comparing two data sets
+            // Acadian-specific example (Note: the actual example is not necessarily useful,
+            // it's just being done to show how the process works)
+            // This recon uses the same query twice, so the query variables are query specific
+            ReconReport warehousePortGicsRecon = new ReconReport();
+            warehousePortGicsRecon.Name = "Compare GICS Sec Details for 2 days for 1 portfolio";
+            warehousePortGicsRecon.TabLabel = "GICS Sec Changes";
+            warehousePortGicsRecon.FirstQuery = "PortGicsSectorDetails";
+            warehousePortGicsRecon.SecondQuery = "PortGicsSectorDetails";
 
-            // First recon is an example of comparing two data sets from different databases
+            QueryColumn portfolioId = new QueryColumn();
+            portfolioId.Label = "Portfolio ID";
+            portfolioId.Type = ColumnType.number;
+            portfolioId.IdentifyingColumn = true;
+            portfolioId.AlwaysDisplay = true;
+            portfolioId.FirstQueryName = "atpf_id";
+            portfolioId.SecondQueryName = "atpf_id";
+
+            QueryColumn portfolioName = new QueryColumn();
+            portfolioName.Label = "Portfolio Name";
+            portfolioName.Type = ColumnType.text;
+            portfolioName.IdentifyingColumn = false;
+            portfolioName.AlwaysDisplay = true;
+            portfolioName.FirstQueryName = "portf_name";
+            portfolioName.SecondQueryName = "portf_name";
+
+            QueryColumn calcDate = new QueryColumn();
+            calcDate.Label = "Calcul Date";
+            calcDate.Type = ColumnType.date;
+            calcDate.IdentifyingColumn = false;
+            calcDate.AlwaysDisplay = true;
+            calcDate.FirstQueryName = "calcul_date";
+            calcDate.SecondQueryName = "calcul_date";
+
+            QueryColumn instrumentId = new QueryColumn();
+            instrumentId.Label = "Instrument Id";
+            instrumentId.Type = ColumnType.number;
+            instrumentId.IdentifyingColumn = true;
+            instrumentId.AlwaysDisplay = true;
+            instrumentId.FirstQueryName = "atins_id";
+            instrumentId.SecondQueryName = "atins_id";
+
+            QueryColumn instrumentName = new QueryColumn();
+            instrumentName.Label = "Instrument Name";
+            instrumentName.Type = ColumnType.text;
+            instrumentName.IdentifyingColumn = false;
+            instrumentName.AlwaysDisplay = true;
+            instrumentName.FirstQueryName = "atins_name";
+            instrumentName.SecondQueryName = "atins_name";
+
+            warehousePortGicsRecon.QueryVariables = new List<Variable>
+            {
+                new Variable { SubName = "PortId", SubValue = "1003022", QuerySpecific=false },
+                new Variable { SubName = "DateWanted", SubValue = "30-jul-2015", QuerySpecific=true, QueryNumber=1 },
+                new Variable { SubName = "DateWanted", SubValue = "31-jul-2015",QuerySpecific=true, QueryNumber=2 }
+            };
+            sampleRecons.ReconList.Add(warehousePortGicsRecon);
+
+            // Note that queries running on two separate platforms may still be compared
             ReconReport edmDalPortDayPositionRecon = new ReconReport();
             edmDalPortDayPositionRecon.Name = "EDM to DAL Product's Positions for Day";
             edmDalPortDayPositionRecon.TabLabel = "EDM DAL Prod Pos";
@@ -154,14 +271,15 @@ namespace ReconRunner.Model
             edmDalPortDayPositionRecon.Columns.Add(marketValueBase);
             edmDalPortDayPositionRecon.Columns.Add(marketValueLocal);
 
-            edmDalPortDayPositionRecon.QueryVariables = new List<Variable> { 
-                                                                                new Variable { SubName = "ProductId", SubValue = "EEUB" }, 
-                                                                                new Variable { SubName = "EdmDateWanted", SubValue = "01-jul-2014" }, 
-                                                                                new Variable { SubName = "DalDateWanted", SubValue = "1140701" }                                                                          
+            edmDalPortDayPositionRecon.QueryVariables = new List<Variable>
+            { 
+                new Variable { SubName = "ProductId", SubValue = "EEUB", QuerySpecific=false }, 
+                new Variable { SubName = "EdmDateWanted", SubValue = "01-jul-2014", QuerySpecific=false }, 
+                new Variable { SubName = "DalDateWanted", SubValue = "1140701",QuerySpecific=false }                                                                          
             };
             sampleRecons.ReconList.Add(edmDalPortDayPositionRecon);
 
-            // This second recon is an example of a recon with just one query, and any rows returned are assumed to
+            // This recon is an example of a recon with just one query, and any rows returned are assumed to
             // indicate an issue and will be reported
             ReconReport positionsMissingFkRecon = new ReconReport();
             positionsMissingFkRecon.Name = "Positions With Unknown Security or Product";
@@ -203,7 +321,7 @@ namespace ReconRunner.Model
         public void WriteSampleSourcesToXMLFile(string fileName)
         {
             // Write sample XML file holding sample connection templates, connection strings, and queries
-            XmlSerializer serializer = new XmlSerializer(typeof(RRSources));
+            XmlSerializer serializer = new XmlSerializer(typeof(Sources));
             TextWriter writer = new StreamWriter(fileName);
             serializer.Serialize(writer, sampleRRSources);
             writer.Close();
@@ -218,9 +336,9 @@ namespace ReconRunner.Model
             writer.Close();
         }
 
-        public void WriteSourcesToXMLFile(RRSources sources, string fileName)
+        public void WriteSourcesToXMLFile(Sources sources, string fileName)
         {
-            XmlSerializer serializer = new XmlSerializer(typeof(RRSources));
+            XmlSerializer serializer = new XmlSerializer(typeof(Sources));
             TextWriter writer = new StreamWriter(fileName);
             serializer.Serialize(writer, sources);
             writer.Close();
@@ -233,12 +351,12 @@ namespace ReconRunner.Model
             TextReader reader = new StreamReader(fileName);
             return (Recons)serializer.Deserialize(reader);
         }
-        public RRSources ReadSourcesFromXMLFile(string fileName)
+        public Sources ReadSourcesFromXMLFile(string fileName)
         {
-            XmlSerializer serializer = new XmlSerializer(typeof(RRSources));
-            RRSources sources = new RRSources();
+            XmlSerializer serializer = new XmlSerializer(typeof(Sources));
+            Sources sources = new Sources();
             TextReader reader = new StreamReader(fileName);
-            return (RRSources)serializer.Deserialize(reader);
+            return (Sources)serializer.Deserialize(reader);
         }
     }
 }

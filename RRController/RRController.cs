@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Text;
 using ReconRunner;
 using ExcelService;
@@ -31,7 +32,7 @@ namespace ReconRunner.Controller
             ProblemRows
         }
         private Recons recons = new Recons();
-        private RRSources sources = new RRSources();
+        private Sources sources = new Sources();
 
         // Use to translate index to column letter when # columns is variable
         string columnLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";  // *** ASSUMPTION: We'll never go past Z in columns
@@ -117,7 +118,7 @@ namespace ReconRunner.Controller
         }
 
         /* *****TO DO MONDAY 14 JULY: Modify logic creating datatable(s) for query(ies) to use new generic dataservice that reads
-         * RRSources and other objects to make appropriate connections and recons to execute SQL queries. 
+         * Sources and other objects to make appropriate connections and recons to execute SQL queries. 
          * 
          */
 
@@ -165,7 +166,7 @@ namespace ReconRunner.Controller
             catch (Exception ex)
             {
                 rrDataService.CloseConnections();
-                throw new Exception("Error while trying to open connections: " + getFullErrorMessage(ex));
+                throw new Exception("Error while trying to open connections: " + GetFullErrorMessage(ex));
             }
 
             try
@@ -269,7 +270,7 @@ namespace ReconRunner.Controller
             }
             catch (Exception ex)
             {
-                throw new Exception("Error (most likely identifying columns not sufficient to guarantee uniqueness) while preparing first query data: " + getFullErrorMessage(ex));
+                throw new Exception("Error (most likely identifying columns not sufficient to guarantee uniqueness) while preparing first query data: " + GetFullErrorMessage(ex));
             }
 
             try
@@ -289,7 +290,7 @@ namespace ReconRunner.Controller
             }
             catch (Exception ex)
             {
-                throw new Exception("Error (most likely identifying columns not sufficient to guarantee uniqueness) while preparing second query data: " + getFullErrorMessage(ex));
+                throw new Exception("Error (most likely identifying columns not sufficient to guarantee uniqueness) while preparing second query data: " + GetFullErrorMessage(ex));
             }
         }
 
@@ -826,38 +827,96 @@ namespace ReconRunner.Controller
             excelService.AddBlankRow();
         }
 
-        /// <summary>
-        /// Returns true if sources and recons objects have been loaded and validate is passed, otherwise false
-        /// </summary>
-        /// <returns></returns>
+        #region Validation
         public bool ReadyToRun()
         {
-            if (sources.Queries.Count > 0 && recons.ReconList.Count > 0 && IsValid())
-                return true;
-            else
-                return false;
-        }
-
-        private bool IsValid()
-        {
-            var validationIssues = getValidationIssues();
-            if (validationIssues.Count > 0)
-                return false;
-            else
-                return true;
+            return (GetValidationErrors().Count == 0);
         }
 
         /// <summary>
-        /// Perform various validation checks and return results. Can be considered
-        /// ready to go if validation issues list is empty.
+        /// Perform various validation checks and return results for 
+        /// any issues that are considered stoppers for running recons
         /// </summary>
-        /// <returns></returns>
-        private List<string> getValidationIssues()
+        /// <returns>List with one line per error</returns>
+        public List<string> GetValidationErrors()
         {
-            // TODO Implement validation logic
+            var validationErrors = new List<string>();
+            validationErrors.AddRange(validateSources());
+            validationErrors.AddRange(validateRecons());
+            // Sources
+            
+            return validationErrors;
+        }
+
+        /// <summary>
+        /// Identify any errors found with objects loaded from the Sources XML file. 
+        /// Note that certain errors (missing entire sections) will halt any further error checking.
+        /// </summary>
+        /// <returns>List of error descriptions with one line per error</returns>
+        private List<string> validateSources()
+        {
+            var sourcesMessages = new List<string>();
+            var sourcesErrors = new List<string>();
+            // First check if we have a possibly-complete set of info to check.  If not, don't go any further.
+            if (sources.ConnStringTemplates.Count == 0 || sources.ConnectionStrings.Count == 0 || sources.Queries.Count == 0)
+            {
+                sourcesErrors.Add("Sources: Incomplete information. Make sure at least one ConnectionStringTemplate, ConnectionString, and Query exists.");
+                return sourcesErrors;
+            }
+            // Templates
+            // No duplicate names
+            var templateNames = (from csTemplate in sources.ConnStringTemplates
+                                 select csTemplate.Name).ToList();
+            if (getDuplicateEntries(templateNames).Count() > 0)
+                sourcesErrors.Add(string.Format("Sources: One or more duplicate ConnectionString template names found"));
+            
+            
+            return sourcesErrors;
+        }
+
+        private List<string> validateRecons()
+        {
+            var reconsErrors = new List<string>();
+            // First check if we have a possibly-complete set of info to check.  If not, don't go any further.
+            if (recons.ReconList.Count() == 0)
+            {
+                reconsErrors.Add("Recons: Not loaded yet. A recon XML file w/at least one recon specified must be loaded.");
+                return reconsErrors;
+            }
+
+            return reconsErrors;
+        }
+
+        /// <summary>
+        /// Perform various checks for any issues to be considered
+        /// warnings (ie they may be worth noting but won't stop the 
+        /// recons from running successfully)
+        /// </summary>
+        /// <returns>List with one line per warning</returns>
+        public List<string> GetValidationWarnings()
+        {
+            // TODO Implement check for any warnings
             return new List<string>();
         }
 
+
+        /// <summary>
+        /// Identify duplicate entries in a list of strings
+        /// </summary>
+        /// <param name="stringList"></param>
+        /// <returns>String with comma-delimited list of values appearing more than once, or string.empty if none</returns>
+        private string getDuplicateEntries(List<string> stringList)
+        {
+            var dupStrings = stringList.GroupBy(str => str).ToDictionary(str => str.Key, str => str.Count()).Where(strCount => strCount.Value > 1).ToList();
+            if (dupStrings.Count == 0)
+                return string.Empty;
+            else 
+                return string.Join(",", dupStrings.Select(strCount => strCount.Key).ToList());
+        }
+
+        #endregion Validation
+
+        #region Utilities
         /// <summary>
         /// If inner exception exists will append that message to top level exception message,
         /// else just returns top level exception message. Calls itself recursively in case
@@ -865,12 +924,13 @@ namespace ReconRunner.Controller
         /// </summary>
         /// <param name="ex"></param>
         /// <returns></returns>
-        private string getFullErrorMessage(Exception ex)
+        public string GetFullErrorMessage(Exception ex)
         {
             if (ex.InnerException != null)
-                return (string.Format("{0}: {1}", ex.Message, getFullErrorMessage(ex.InnerException)));
+                return (string.Format("{0}: {1}", ex.Message, GetFullErrorMessage(ex.InnerException)));
             else
                 return ex.Message;
         }
+        #endregion Utilities
     }
 }

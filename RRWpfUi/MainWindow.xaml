@@ -24,10 +24,10 @@
         </Grid.RowDefinitions>
         <Button x:Name="btnLoadSources" Content="Load Sources File" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Sources XML file to use" Click="btnLoadSources_Click"/>
         <Button x:Name="btnLoadRecons" Content="Load Recons File" HorizontalAlignment="Left" Margin="10,45,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Click="btnLoadRecons_Click"/>
-        <Button x:Name="btnRunRecons" Content="Run Recons" HorizontalAlignment="Left" Margin="266,29,0,0" VerticalAlignment="Top" Width="127" IsEnabled="False" ToolTip="Click to run recons after Sources and Recons XML files have been loaded" Click="btnRunRecons_Click"/>
+        <Button x:Name="btnRunRecons" Content="Run Recons" HorizontalAlignment="Left" Margin="160,45,0,0" VerticalAlignment="Top" Width="127" IsEnabled="False" ToolTip="Click to run recons after Sources and Recons XML files have been loaded. If disabled there are errors to be resolved." ToolTipService.ShowOnDisabled="True" Click="btnRunRecons_Click"/>
         <Label x:Name="lblStatus" Content="Status" HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0.774,3.55" Margin="10,81,0,0" Grid.RowSpan="2"/>
         <ScrollViewer x:Name="scrollViewStatus" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="5">
-            <TextBlock x:Name="txtStatus" Grid.Row="1"
+            <TextBlock x:Name="txtStatus" Grid.Row="1" 
                        HorizontalAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" 
                        Height="{Binding Converter={StaticResource PercentageConverter},
                                 ElementName=scrollViewStatus,
@@ -37,9 +37,10 @@
                                 ElementName=scrollViewStatus,
                                 Path=ActualWidth,
                                 ConverterParameter=0.95}" 
-                       ToolTip="Information on file validation and/or recon run status will appear here." />
+                       ToolTip="Information on file validation and/or recon run status will appear here." Background="White" />
         </ScrollViewer>
         <Button x:Name="btnCreateSamples" Content="Create Sample Files" HorizontalAlignment="Left" Margin="362,6,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Grid.Row="2" Click="btnCreateSamples_Click"/>
+        <Button x:Name="btnValidate" Content="Validate" HorizontalAlignment="Left" Margin="160,10,0,0" VerticalAlignment="Top" Width="127" IsEnabled="False" ToolTip="If button enabled you may see if there are any validation details. If not enabled, either no data is loaded or there are no issues." ToolTipService.ShowOnDisabled="True" Click="btnValidate_Click" RenderTransformOrigin="0.449,-0.864"/>
 
     </Grid>
 </Window>
