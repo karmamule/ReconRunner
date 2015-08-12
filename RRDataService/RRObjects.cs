@@ -241,14 +241,14 @@ namespace ReconRunner.Model
         string firstQueryColName;
         string secondQueryColName;
         ColumnType type;
-        bool shouldMatch;
+        bool checkDataMatch;
         bool alwaysDisplay;
         bool identifyingColumn;
 
         public QueryColumn()
         {
             type = ColumnType.text;
-            shouldMatch = false;
+            checkDataMatch = false;
             alwaysDisplay = false;
             identifyingColumn = false;
         }
@@ -304,11 +304,11 @@ namespace ReconRunner.Model
         /// A boolean indicating if the column should be compared to its equivalent
         /// in both queries being compared.   Defaults to false.
         /// </summary>
-        [XmlAttribute("ShouldMatch")]
-        public bool ShouldMatch
+        [XmlAttribute("CheckDataMatch")]
+        public bool CheckDataMatch
         {
-            get { return shouldMatch; }
-            set {shouldMatch = value;}
+            get { return checkDataMatch; }
+            set {checkDataMatch = value;}
         }
 
         /// <summary>

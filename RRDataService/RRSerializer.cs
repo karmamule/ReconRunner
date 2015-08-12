@@ -252,14 +252,14 @@ namespace ReconRunner.Model
             QueryColumn marketValueBase = new QueryColumn();
             marketValueBase.Label = "Market Value Base";
             marketValueBase.Type = ColumnType.number;
-            marketValueBase.ShouldMatch = true;
+            marketValueBase.CheckDataMatch = true;
             marketValueBase.FirstQueryColName = "market_value_base";
             marketValueBase.SecondQueryColName = "marketvaluebase";
 
             QueryColumn marketValueLocal = new QueryColumn();
             marketValueLocal.Label = "Market Value Local";
             marketValueLocal.Type = ColumnType.number;
-            marketValueLocal.ShouldMatch = true;
+            marketValueLocal.CheckDataMatch = true;
             marketValueLocal.FirstQueryColName = "market_value_local";
             marketValueLocal.SecondQueryColName = "marketvaluelocal";
 

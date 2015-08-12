@@ -484,7 +484,7 @@ namespace ReconRunner.Controller
                         // actually have any differences that need to be reported.
                         foreach (QueryColumn column in recon.Columns)
                         {
-                            if (column.ShouldMatch)
+                            if (column.CheckDataMatch)
                             {
                                 if (!valuesMatch(q1Rows[rowKey][column.FirstQueryColName], q2Rows[rowKey][column.SecondQueryColName], column.Type))
                                 {
@@ -621,7 +621,7 @@ namespace ReconRunner.Controller
             for (int i = 0; i < columns.Count; i++)
             {
                 queryColumn = columns[i];
-                if ((queryColumn.AlwaysDisplay || queryColumn.ShouldMatch) && !queryColumn.IdentifyingColumn)
+                if ((queryColumn.AlwaysDisplay || queryColumn.CheckDataMatch) && !queryColumn.IdentifyingColumn)
                 {
                     if (section == reportSection.FirstQueryRowWithoutMatch)
                     {
@@ -732,13 +732,13 @@ namespace ReconRunner.Controller
             for (int i = 0; i < columns.Count; i++)
             {
                 queryColumn = columns[i];
-                if ((queryColumn.AlwaysDisplay || (queryColumn.ShouldMatch && showShouldMatchColumns)) && !queryColumn.IdentifyingColumn)
+                if ((queryColumn.AlwaysDisplay || (queryColumn.CheckDataMatch && showShouldMatchColumns)) && !queryColumn.IdentifyingColumn)
                 {
                     // Let the user know if this column is found in just the first
                     // query (1) or just the second query (2)
                     if (queryColumn.FirstQueryColName != null && queryColumn.SecondQueryColName != null)
                     {
-                        if (queryColumn.ShouldMatch)
+                        if (queryColumn.CheckDataMatch)
                         {
                             columnAttribute = "(M)";
                         }
@@ -923,6 +923,7 @@ namespace ReconRunner.Controller
             }
             else
             {
+                var queryNames = (from query in sources.Queries select query.Name).ToList();
                 // Duplicate recon names
                 var dupNames = getDuplicateEntries((from recon in recons.ReconList select recon.Name).ToList());
                 if (dupNames != string.Empty)
@@ -931,8 +932,6 @@ namespace ReconRunner.Controller
                 dupNames = getDuplicateEntries((from recon in recons.ReconList select recon.TabLabel).ToList());
                 if (dupNames != string.Empty)
                     reconsErrors.Add(string.Format("Recons: Duplicate recon tab label(s) found: {0}", dupNames));
-                // Check associated queries
-                var queryNames = (from query in sources.Queries select query.Name).ToList();
                 recons.ReconList.ForEach(recon =>
                 {
                     // Check first query exists, and if so are all placeholders given a value
@@ -945,7 +944,7 @@ namespace ReconRunner.Controller
                                        select match.Groups[1].Value).ToList();
                         var firstQueryVariables = (from queryVariable in recon.QueryVariables
                                                    where !queryVariable.QuerySpecific || (queryVariable.QueryNumber == 1) 
-select queryVariable.SubName).ToList();
+                                                   select queryVariable.SubName).ToList();
                         matches.ForEach(placeholder =>
                         {
                             if (!firstQueryVariables.Contains(placeholder))
@@ -988,6 +987,33 @@ select queryVariable.SubName).ToList();
                     {
                         var invalidVarNames = string.Join(",", invalidQueryVariables);
                         reconsErrors.Add(string.Format("Recons: For recon {0} the query variable(s) {1} are invalid because marked query specific but have QueryNumber other than 1 or 2", recon.Name, invalidVarNames));
+                    }
+                    var identCols = (from col in recon.Columns
+                                     where col.IdentifyingColumn == true
+                                     select col.Label).ToList();
+                    var checkDataMatchCols = (from col in recon.Columns
+                                              where col.CheckDataMatch == true
+                                              select col.Label).ToList();
+                    // Tests specific to single-query recons
+                    if (recon.SecondQueryName == string.Empty)
+                    {
+                        if (identCols.Count() > 0)
+                        {
+                            var identColList = string.Join(",", identCols);
+                            reconsErrors.Add(string.Format("Recons: Recon {0} is a single-query recon but column(s) {1} are set as identifying column. ", recon.Name, identColList));
+                        }
+                        if (checkDataMatchCols.Count() > 0)
+                        {
+                            var dataMatchColList = string.Join(",", checkDataMatchCols);
+                        reconsErrors.Add(string.Format("Recons: Recon {0} is a single-recon but column(s) {1} are set as needing to check if data matches between 2 queries.", recon.Name, dataMatchColList));
+                        }                         
+                    }
+                    else
+                    {
+                        // Tests specific to two-query recons
+                        if (identCols.Count == 0)
+                            reconsErrors.Add(string.Format("Recons: Recon {0} is a two-query recon but has no identifying columns to use to match rows between data sets.", recon.Name));
+                        // Note: it's ok to have a two-query recon with no checkdatamatch columns because the  purpose of the recon may be only to identify orphans.
                     }
                 });
             } 
