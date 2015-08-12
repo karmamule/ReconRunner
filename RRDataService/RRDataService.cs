@@ -15,18 +15,14 @@ namespace ReconRunner.Model
         #region Constructors
         private static RRDataService instance = new RRDataService();
         public static RRDataService Instance { get { return instance; } }
+        private static RRSerializer serializer = new RRSerializer();
 
         private Sources sources;
+        private Recons recons;
         // A set of open connections available for use
         // Use OpenConnections() and CloseConnections() to manage them for a given recon
         // Note connections can be of type TdConnection (for Teradata) or OleDbConnection (for anything else)
         private Dictionary<string, DbConnection> openConnections = new Dictionary<string, DbConnection>();
-
-       public Sources Sources
-        {
-            get { return sources; }
-            set { sources = value; }
-        }
 
         private RRDataService()
         {

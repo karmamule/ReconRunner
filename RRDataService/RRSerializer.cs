@@ -11,7 +11,7 @@ namespace ReconRunner.Model
     {
         #region Sample builder
         private Recons sampleRecons;
-        private Sources sampleRRSources;
+        private Sources sampleSources;
 
         public RRSerializer()
         {
@@ -20,7 +20,7 @@ namespace ReconRunner.Model
 
         private void populateSampleReconObjects()
         {
-            sampleRRSources = new Sources();
+            sampleSources = new Sources();
             sampleRecons = new Recons();
             // Create sample objects to use to populate sample Sources and RRReports XML files
             // for user to use as basis for real recons.
@@ -37,9 +37,9 @@ namespace ReconRunner.Model
             var oracleTemplate = new ConnectionStringTemplate();
             oracleTemplate.Name = "Oracle";
             oracleTemplate.Template = "Provider=MSDAORA.1;Data Source=|TNSName|;User Id=|User|;Password=|Password|;Persist Security Info=false;";
-            sampleRRSources.ConnStringTemplates.Add(sqlServerTemplate);
-            sampleRRSources.ConnStringTemplates.Add(teradataTemplate);
-            sampleRRSources.ConnStringTemplates.Add(oracleTemplate);
+            sampleSources.ConnStringTemplates.Add(sqlServerTemplate);
+            sampleSources.ConnStringTemplates.Add(teradataTemplate);
+            sampleSources.ConnStringTemplates.Add(oracleTemplate);
 
             // Sample Connection Strings
             var warehouseConnectionString = new RRConnectionString();
@@ -72,8 +72,9 @@ namespace ReconRunner.Model
                 new Variable {SubName="User", SubValue="edm_read"}, 
                 new Variable {SubName="Password", SubValue="edm_read"}
             };
-            sampleRRSources.ConnectionStrings.Add(dalUatConnectionString);
-            sampleRRSources.ConnectionStrings.Add(edmUatConnectionString);
+            sampleSources.ConnectionStrings.Add(dalUatConnectionString);
+            sampleSources.ConnectionStrings.Add(edmUatConnectionString);
+            sampleSources.ConnectionStrings.Add(warehouseConnectionString);
 
             // Sample Queries
             var doc = new XmlDocument();
@@ -134,10 +135,10 @@ namespace ReconRunner.Model
             posFkQuery.Name = "DalPositionsMissingFk";
             posFkQuery.ConnStringName = "Teradata UAT";
             posFkQuery.SQL = doc.CreateCDataSection("select * from (select dimtimeid,  case when dimsecurityid = 'UNKNOWN' and dimproductid = 'UNKNOWN' then 'BOTH' when dimsecurityid = 'UNKNOWN' then 'SECURITY' else 'PRODUCT' end MissingEntity, case when dimsecurityid = 'UNKNOWN' and dimproductid = 'UNKNOWN' then 'Security ID: ' || OrigSecurityId || '; Product ID: ' || OrigProductId when dimsecurityid = 'UNKNOWN' then OrigSecurityId else OrigProductId end MissingEntityId from factposition where (dimsecurityid = 'UNKNOWN' or dimproductid = 'UNKNOWN') and dimtimeid >= 1131101) data group by MissingEntity, MissingEntityId, DimTimeId order by MissingEntity, MissingEntityId, DimTimeId");
-            sampleRRSources.Queries.Add(warehouseQuery);
-            sampleRRSources.Queries.Add(edmQuery);
-            sampleRRSources.Queries.Add(teraQuery);
-            sampleRRSources.Queries.Add(posFkQuery);
+            sampleSources.Queries.Add(warehouseQuery);
+            sampleSources.Queries.Add(edmQuery);
+            sampleSources.Queries.Add(teraQuery);
+            sampleSources.Queries.Add(posFkQuery);
 
             // Create RRReportsSample.xml
             // Holds sample recon report definitions along with substitution values to use
@@ -194,6 +195,12 @@ namespace ReconRunner.Model
             instrumentName.AlwaysDisplay = true;
             instrumentName.FirstQueryColName = "atins_name";
             instrumentName.SecondQueryColName = "atins_name";
+
+            warehousePortGicsRecon.Columns.Add(portfolioId);
+            warehousePortGicsRecon.Columns.Add(portfolioName);
+            warehousePortGicsRecon.Columns.Add(calcDate);
+            warehousePortGicsRecon.Columns.Add(instrumentId);
+            warehousePortGicsRecon.Columns.Add(instrumentName);
 
             warehousePortGicsRecon.QueryVariables = new List<QueryVariable>
             {
@@ -323,7 +330,7 @@ namespace ReconRunner.Model
             // Write sample XML file holding sample connection templates, connection strings, and queries
             XmlSerializer serializer = new XmlSerializer(typeof(Sources));
             TextWriter writer = new StreamWriter(fileName);
-            serializer.Serialize(writer, sampleRRSources);
+            serializer.Serialize(writer, sampleSources);
             writer.Close();
         }
         #endregion Sample Builder
@@ -357,6 +364,16 @@ namespace ReconRunner.Model
             Sources sources = new Sources();
             TextReader reader = new StreamReader(fileName);
             return (Sources)serializer.Deserialize(reader);
+        }
+
+        public Sources SampleSources
+        {
+            get { return sampleSources; }
+        }
+
+        public Recons SampleRecons
+        {
+            get { return sampleRecons; }
         }
     }
 }

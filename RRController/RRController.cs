@@ -33,7 +33,17 @@ namespace ReconRunner.Controller
             ProblemRows
         }
         private Recons recons = new Recons();
+        public Recons Recons
+        {
+            get { return recons; }
+            set { recons = value; }
+        }
         private Sources sources = new Sources();
+        public Sources Sources
+        {
+            get { return sources; }
+            set { sources = value; }
+        }
 
         // Use to translate index to column letter when # columns is variable
         string columnLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";  // *** ASSUMPTION: We'll never go past Z in columns
@@ -55,6 +65,7 @@ namespace ReconRunner.Controller
                 return instance;
             }
         }
+
         #endregion Properties and constructors
 
         #region recons object serialization
@@ -159,7 +170,6 @@ namespace ReconRunner.Controller
             string results = "";
             List<DataTable> reconData = new List<DataTable>();
 
-            rrDataService.Sources = sources;
             try
             {
                 rrDataService.OpenConnections(recons);
@@ -1050,6 +1060,16 @@ namespace ReconRunner.Controller
                 return (string.Format("{0}: {1}", ex.Message, GetFullErrorMessage(ex.InnerException)));
             else
                 return ex.Message;
+        }
+
+        /// <summary>
+        /// Load sample recon and source data from the serializer rather than manually from files.
+        /// Used for unit testing purposes.
+        /// </summary>
+        public void UseSampleData()
+        {
+            sources = rrSerializer.SampleSources;
+            recons = rrSerializer.SampleRecons;
         }
         #endregion Utilities
     }

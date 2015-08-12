@@ -353,6 +353,7 @@ namespace ReconRunner.Model
         public ReconReport()
         {
             columns = new List<QueryColumn>();
+            queryVariables = new List<QueryVariable>();
         }
 
         /// <summary>
