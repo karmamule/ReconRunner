@@ -25,8 +25,6 @@ namespace ReconRunner.Model
     {
         string subName;
         string subValue;
-        bool querySpecific;
-        int queryNumber;
 
         [XmlAttribute("SubName")]
         public string SubName
@@ -41,9 +39,18 @@ namespace ReconRunner.Model
             get { return subValue; }
             set { subValue = value; }
         }
+
+    }
+
+    [XmlRoot("QueryVariable")]
+    public class QueryVariable: Variable
+    {
+        bool querySpecific;
+        int queryNumber;
+
         /// <summary>
         /// Set to true if the variable should be unique for each query.  False means
-        /// use the same value for both queries (if used by both)
+        /// use the same value for both queries (if used by both). 
         /// </summary>
         [XmlAttribute("QuerySpecific")]
         public bool QuerySpecific
@@ -54,7 +61,7 @@ namespace ReconRunner.Model
 
         /// <summary>
         /// For QuerySpecific variables, indicates which query it applies to. (1 or 2)
-        /// Ignored if QuerySpecific = false
+        /// Ignored if QuerySpecific = false. 
         /// </summary>
         [XmlAttribute("QueryNumber")]
         public int QueryNumber
@@ -149,7 +156,7 @@ namespace ReconRunner.Model
     public class RRConnectionString
     {
         string name;
-        string template;
+        string templateName;
         private DatabaseType databaseType;
         List<Variable> templateVariables;
 
@@ -160,11 +167,11 @@ namespace ReconRunner.Model
             set { name = value; }
         }
 
-        [XmlAttribute("Template")]
+        [XmlAttribute("TemplateName")]
         public string TemplateName
         {
-            get { return template; }
-            set { template = value; }
+            get { return templateName; }
+            set { templateName = value; }
         }
 
         [XmlAttribute("DatabaseType")]
@@ -231,8 +238,8 @@ namespace ReconRunner.Model
     public class QueryColumn
     {
         string label;
-        string firstQueryName;
-        string secondQueryName;
+        string firstQueryColName;
+        string secondQueryColName;
         ColumnType type;
         bool shouldMatch;
         bool alwaysDisplay;
@@ -262,11 +269,11 @@ namespace ReconRunner.Model
         /// doesn't have this column.  (Note that shouldMatch must be FALSE if set to NULL.)
         /// Query name will be used as part of subtitle in recon report created.
         /// </summary>
-        [XmlAttribute("FirstQueryName")]
-        public string FirstQueryName
+        [XmlAttribute("FirstQueryColName")]
+        public string FirstQueryColName
         {
-            get {return firstQueryName; }
-            set { firstQueryName = value; }
+            get {return firstQueryColName; }
+            set { firstQueryColName = value; }
         }
 
         /// <summary>
@@ -274,11 +281,11 @@ namespace ReconRunner.Model
         /// doesn't have this column.  (Note that shouldMatch must be FALSE if set to NULL.)
         /// Query name will be used as part of subtitle in recon report created.
         /// </summary>
-        [XmlAttribute("SecondQueryName")]
-        public string SecondQueryName
+        [XmlAttribute("SecondQueryColName")]
+        public string SecondQueryColName
         {
-            get { return secondQueryName; }
-            set { secondQueryName = value; }
+            get { return secondQueryColName; }
+            set { secondQueryColName = value; }
         }
 
         /// <summary>
@@ -339,9 +346,9 @@ namespace ReconRunner.Model
         string name;
         string tabLabel;
         List<QueryColumn> columns;
-        string firstQuery;
-        List<Variable> queryVariables;
-        string secondQuery;
+        string firstQueryName;
+        List<QueryVariable> queryVariables;
+        string secondQueryName;
 
         public ReconReport()
         {
@@ -380,7 +387,7 @@ namespace ReconRunner.Model
         }
 
         [XmlElement("QueryVariable")]
-        public List<Variable> QueryVariables
+        public List<QueryVariable> QueryVariables
         {
             get { return queryVariables; }
             set { queryVariables = value; }
@@ -389,21 +396,21 @@ namespace ReconRunner.Model
         /// <summary>
         /// A ReconQuery object for the first query in this recon
         /// </summary>
-        [XmlAttribute("FirstQuery")]
-        public string FirstQuery
+        [XmlAttribute("FirstQueryName")]
+        public string FirstQueryName
         {
-            get { return firstQuery; }
-            set { firstQuery = value; }
+            get { return firstQueryName; }
+            set { firstQueryName = value; }
         }
 
         /// <summary>
         /// A ReconQuery object for the second query in this recon.
         /// </summary>
-        [XmlAttribute("SecondQuery")]
-        public string SecondQuery
+        [XmlAttribute("SecondQueryName")]
+        public string SecondQueryName
         {
-            get { return secondQuery; }
-            set { secondQuery = value; }
+            get { return secondQueryName; }
+            set { secondQueryName = value; }
         }
 
 

@@ -145,7 +145,7 @@ namespace RRWpfUi
             txtStatus.Text += "Starting validation..." + cr;
             var validationMessages = new List<string>();
             validationMessages.AddRange(rrController.GetValidationErrors());
-            validationMessages.AddRange(rrController.GetValidationWarnings());
+            //validationMessages.AddRange(rrController.GetValidationWarnings());
             if (validationMessages.Count == 0)
                 txtStatus.Text += "No validation errors or warnings found." + cr;
             else

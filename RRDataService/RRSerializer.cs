@@ -152,54 +152,54 @@ namespace ReconRunner.Model
             ReconReport warehousePortGicsRecon = new ReconReport();
             warehousePortGicsRecon.Name = "Compare GICS Sec Details for 2 days for 1 portfolio";
             warehousePortGicsRecon.TabLabel = "GICS Sec Changes";
-            warehousePortGicsRecon.FirstQuery = "PortGicsSectorDetails";
-            warehousePortGicsRecon.SecondQuery = "PortGicsSectorDetails";
+            warehousePortGicsRecon.FirstQueryName = "PortGicsSectorDetails";
+            warehousePortGicsRecon.SecondQueryName = "PortGicsSectorDetails";
 
             QueryColumn portfolioId = new QueryColumn();
             portfolioId.Label = "Portfolio ID";
             portfolioId.Type = ColumnType.number;
             portfolioId.IdentifyingColumn = true;
             portfolioId.AlwaysDisplay = true;
-            portfolioId.FirstQueryName = "atpf_id";
-            portfolioId.SecondQueryName = "atpf_id";
+            portfolioId.FirstQueryColName = "atpf_id";
+            portfolioId.SecondQueryColName = "atpf_id";
 
             QueryColumn portfolioName = new QueryColumn();
             portfolioName.Label = "Portfolio Name";
             portfolioName.Type = ColumnType.text;
             portfolioName.IdentifyingColumn = false;
             portfolioName.AlwaysDisplay = true;
-            portfolioName.FirstQueryName = "portf_name";
-            portfolioName.SecondQueryName = "portf_name";
+            portfolioName.FirstQueryColName = "portf_name";
+            portfolioName.SecondQueryColName = "portf_name";
 
             QueryColumn calcDate = new QueryColumn();
             calcDate.Label = "Calcul Date";
             calcDate.Type = ColumnType.date;
             calcDate.IdentifyingColumn = false;
             calcDate.AlwaysDisplay = true;
-            calcDate.FirstQueryName = "calcul_date";
-            calcDate.SecondQueryName = "calcul_date";
+            calcDate.FirstQueryColName = "calcul_date";
+            calcDate.SecondQueryColName = "calcul_date";
 
             QueryColumn instrumentId = new QueryColumn();
             instrumentId.Label = "Instrument Id";
             instrumentId.Type = ColumnType.number;
             instrumentId.IdentifyingColumn = true;
             instrumentId.AlwaysDisplay = true;
-            instrumentId.FirstQueryName = "atins_id";
-            instrumentId.SecondQueryName = "atins_id";
+            instrumentId.FirstQueryColName = "atins_id";
+            instrumentId.SecondQueryColName = "atins_id";
 
             QueryColumn instrumentName = new QueryColumn();
             instrumentName.Label = "Instrument Name";
             instrumentName.Type = ColumnType.text;
             instrumentName.IdentifyingColumn = false;
             instrumentName.AlwaysDisplay = true;
-            instrumentName.FirstQueryName = "atins_name";
-            instrumentName.SecondQueryName = "atins_name";
+            instrumentName.FirstQueryColName = "atins_name";
+            instrumentName.SecondQueryColName = "atins_name";
 
-            warehousePortGicsRecon.QueryVariables = new List<Variable>
+            warehousePortGicsRecon.QueryVariables = new List<QueryVariable>
             {
-                new Variable { SubName = "PortId", SubValue = "1003022", QuerySpecific=false },
-                new Variable { SubName = "DateWanted", SubValue = "30-jul-2015", QuerySpecific=true, QueryNumber=1 },
-                new Variable { SubName = "DateWanted", SubValue = "31-jul-2015",QuerySpecific=true, QueryNumber=2 }
+                new QueryVariable { SubName = "PortId", SubValue = "1003022", QuerySpecific=false },
+                new QueryVariable { SubName = "DateWanted", SubValue = "30-jul-2015", QuerySpecific=true, QueryNumber=1 },
+                new QueryVariable { SubName = "DateWanted", SubValue = "31-jul-2015",QuerySpecific=true, QueryNumber=2 }
             };
             sampleRecons.ReconList.Add(warehousePortGicsRecon);
 
@@ -207,61 +207,61 @@ namespace ReconRunner.Model
             ReconReport edmDalPortDayPositionRecon = new ReconReport();
             edmDalPortDayPositionRecon.Name = "EDM to DAL Product's Positions for Day";
             edmDalPortDayPositionRecon.TabLabel = "EDM DAL Prod Pos";
-            edmDalPortDayPositionRecon.FirstQuery = "EdmProductDayPositions";
-            edmDalPortDayPositionRecon.SecondQuery = "DalProductDayPositions";
+            edmDalPortDayPositionRecon.FirstQueryName = "EdmProductDayPositions";
+            edmDalPortDayPositionRecon.SecondQueryName = "DalProductDayPositions";
 
             QueryColumn productId = new QueryColumn();
             productId.Label = "Product ID";
             productId.Type = ColumnType.text;
             productId.IdentifyingColumn = true;
             productId.AlwaysDisplay = true;
-            productId.FirstQueryName = "entity_id";
-            productId.SecondQueryName = "productid";
+            productId.FirstQueryColName = "entity_id";
+            productId.SecondQueryColName = "productid";
 
             QueryColumn fundName = new QueryColumn();
             fundName.Label = "Product Name";
             fundName.Type = ColumnType.text;
             fundName.AlwaysDisplay = true;
-            fundName.FirstQueryName = null;
-            fundName.SecondQueryName = "EntityLongName";
+            fundName.FirstQueryColName = null;
+            fundName.SecondQueryColName = "EntityLongName";
 
             QueryColumn snapshotId = new QueryColumn();
             snapshotId.Label = "Snapshot";
             snapshotId.Type = ColumnType.text;
             snapshotId.AlwaysDisplay = true;
             snapshotId.IdentifyingColumn = true;
-            snapshotId.FirstQueryName = "snapshot_id";
-            snapshotId.SecondQueryName = "snapshotid";
+            snapshotId.FirstQueryColName = "snapshot_id";
+            snapshotId.SecondQueryColName = "snapshotid";
 
             QueryColumn securityId = new QueryColumn();
             securityId.Label = "Security ID";
             securityId.Type = ColumnType.number;
             securityId.IdentifyingColumn = true;
             securityId.AlwaysDisplay = true;
-            securityId.FirstQueryName = "security_alias";
-            securityId.SecondQueryName = "OrigSecurityId";
+            securityId.FirstQueryColName = "security_alias";
+            securityId.SecondQueryColName = "OrigSecurityId";
 
             QueryColumn longShortIndicator = new QueryColumn();
             longShortIndicator.Label = "Long-Short Indicator";
             longShortIndicator.Type = ColumnType.text;
             longShortIndicator.AlwaysDisplay = true;
             longShortIndicator.IdentifyingColumn = true;
-            longShortIndicator.FirstQueryName = "long_short_indicator";
-            longShortIndicator.SecondQueryName = "LongShortIndicator";
+            longShortIndicator.FirstQueryColName = "long_short_indicator";
+            longShortIndicator.SecondQueryColName = "LongShortIndicator";
 
             QueryColumn marketValueBase = new QueryColumn();
             marketValueBase.Label = "Market Value Base";
             marketValueBase.Type = ColumnType.number;
             marketValueBase.ShouldMatch = true;
-            marketValueBase.FirstQueryName = "market_value_base";
-            marketValueBase.SecondQueryName = "marketvaluebase";
+            marketValueBase.FirstQueryColName = "market_value_base";
+            marketValueBase.SecondQueryColName = "marketvaluebase";
 
             QueryColumn marketValueLocal = new QueryColumn();
             marketValueLocal.Label = "Market Value Local";
             marketValueLocal.Type = ColumnType.number;
             marketValueLocal.ShouldMatch = true;
-            marketValueLocal.FirstQueryName = "market_value_local";
-            marketValueLocal.SecondQueryName = "marketvaluelocal";
+            marketValueLocal.FirstQueryColName = "market_value_local";
+            marketValueLocal.SecondQueryColName = "marketvaluelocal";
 
             edmDalPortDayPositionRecon.Columns.Add(productId);
             edmDalPortDayPositionRecon.Columns.Add(fundName);
@@ -271,11 +271,11 @@ namespace ReconRunner.Model
             edmDalPortDayPositionRecon.Columns.Add(marketValueBase);
             edmDalPortDayPositionRecon.Columns.Add(marketValueLocal);
 
-            edmDalPortDayPositionRecon.QueryVariables = new List<Variable>
+            edmDalPortDayPositionRecon.QueryVariables = new List<QueryVariable>
             { 
-                new Variable { SubName = "ProductId", SubValue = "EEUB", QuerySpecific=false }, 
-                new Variable { SubName = "EdmDateWanted", SubValue = "01-jul-2014", QuerySpecific=false }, 
-                new Variable { SubName = "DalDateWanted", SubValue = "1140701",QuerySpecific=false }                                                                          
+                new QueryVariable { SubName = "ProductId", SubValue = "EEUB", QuerySpecific=false }, 
+                new QueryVariable { SubName = "EdmDateWanted", SubValue = "01-jul-2014", QuerySpecific=false }, 
+                new QueryVariable { SubName = "DalDateWanted", SubValue = "1140701",QuerySpecific=false }                                                                          
             };
             sampleRecons.ReconList.Add(edmDalPortDayPositionRecon);
 
@@ -284,23 +284,23 @@ namespace ReconRunner.Model
             ReconReport positionsMissingFkRecon = new ReconReport();
             positionsMissingFkRecon.Name = "Positions With Unknown Security or Product";
             positionsMissingFkRecon.TabLabel = "Pos Missing FK";
-            positionsMissingFkRecon.FirstQuery = "DalPositionsMissingFk";
-            positionsMissingFkRecon.SecondQuery = string.Empty;
+            positionsMissingFkRecon.FirstQueryName = "DalPositionsMissingFk";
+            positionsMissingFkRecon.SecondQueryName = string.Empty;
 
             var dimTimeId = new QueryColumn();
             dimTimeId.Label = "Date";
             dimTimeId.Type = ColumnType.date;
-            dimTimeId.FirstQueryName = "dimtimeid";
+            dimTimeId.FirstQueryColName = "dimtimeid";
 
             var missingEntity = new QueryColumn();
             missingEntity.Label = "Missing";
             missingEntity.Type = ColumnType.text;
-            missingEntity.FirstQueryName = "MissingEntity";
+            missingEntity.FirstQueryColName = "MissingEntity";
 
             var originalEntityId = new QueryColumn();
             originalEntityId.Label = "Entity Id(s)";
             originalEntityId.Type = ColumnType.text;
-            originalEntityId.FirstQueryName = "MissingEntityId";
+            originalEntityId.FirstQueryColName = "MissingEntityId";
 
             positionsMissingFkRecon.Columns.Add(dimTimeId);
             positionsMissingFkRecon.Columns.Add(missingEntity);

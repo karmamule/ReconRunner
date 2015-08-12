@@ -52,12 +52,12 @@ namespace ReconRunner.Model
             try
             {
                 // Get data for first query
-                var firstQuery = sources.Queries.Single(query => query.Name == recon.FirstQuery);
+                var firstQuery = sources.Queries.Single(query => query.Name == recon.FirstQueryName);
                 reconData.Add(getQueryDataTable(firstQuery, recon.QueryVariables));
                 // If necessary, get data for second query
-                if (recon.SecondQuery != "")
+                if (recon.SecondQueryName != "")
                 {
-                    var secondQuery = sources.Queries.Single(query => query.Name == recon.SecondQuery);
+                    var secondQuery = sources.Queries.Single(query => query.Name == recon.SecondQueryName);
                     reconData.Add(getQueryDataTable(secondQuery, recon.QueryVariables));
                 }
                 return reconData;
@@ -76,7 +76,7 @@ namespace ReconRunner.Model
         /// <param name="query">The RRQuery object to be executed</param>
         /// <param name="queryVariables">Substitution variables to be used to create the final SQL to be run</param>
         /// <returns></returns>
-        private DataTable getQueryDataTable(RRQuery query, List<Variable> queryVariables)
+        private DataTable getQueryDataTable(RRQuery query, List<QueryVariable> queryVariables)
         {
             var dataSet = new DataSet();
             // Get the connection for the query.     
@@ -133,11 +133,11 @@ namespace ReconRunner.Model
                 // Open connection for first query if needed
                 try
                 {
-                    var firstConnection = sources.ConnectionStrings.Where(cs => cs.Name == sources.Queries.Where(query => query.Name == rr.FirstQuery).First().ConnStringName).First();
+                    var firstConnection = sources.ConnectionStrings.Where(cs => cs.Name == sources.Queries.Where(query => query.Name == rr.FirstQueryName).First().ConnStringName).First();
                     openConnection(firstConnection);
-                    if (rr.SecondQuery != "")
+                    if (rr.SecondQueryName != "")
                     {
-                        var secondConnection = sources.ConnectionStrings.Where(cs => cs.Name == sources.Queries.Where(query => query.Name == rr.SecondQuery).First().ConnStringName).First();
+                        var secondConnection = sources.ConnectionStrings.Where(cs => cs.Name == sources.Queries.Where(query => query.Name == rr.SecondQueryName).First().ConnStringName).First();
                         openConnection(secondConnection);
                     }
                 }
@@ -219,7 +219,7 @@ namespace ReconRunner.Model
         /// <param name="reconVariables"></param>
         /// <param name="querySql"></param>
         /// <returns></returns>
-        private string buildQuerySql(List<Variable> reconVariables, string querySql)
+        private string buildQuerySql(List<QueryVariable> reconVariables, string querySql)
         {
             string finalQuerySql = querySql;
             reconVariables.ForEach(variable =>

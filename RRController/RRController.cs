@@ -6,7 +6,7 @@ using System.Text;
 using ReconRunner;
 using ExcelService;
 using ReconRunner.Model;
-
+using System.Text.RegularExpressions;
 
 namespace ReconRunner.Controller
 {
@@ -18,6 +18,7 @@ namespace ReconRunner.Controller
         private RRDataService rrDataService = RRDataService.Instance;
         private RRSerializer rrSerializer = new RRSerializer();
         private ExcelService.ExcelService excelService = ExcelService.ExcelService.Instance;
+        string pipePlaceholderRegex = @"\|(\w+)\|";
 
         // Each 2-query recon is divided into three sections:
         //      Rows found in the first query without a matching row in the second
@@ -179,8 +180,8 @@ namespace ReconRunner.Controller
                         // getQueriesData(recon, ref firstQueryData, ref secondQueryData);
                         reconData = rrDataService.GetReconData(recon);
                         firstQueryData = reconData[0];
-                        var test = recon.SecondQuery;
-                        if (recon.SecondQuery != "")
+                        var test = recon.SecondQueryName;
+                        if (recon.SecondQueryName != "")
                             secondQueryData = reconData[1];
 
                         createReconTab(recon, firstQueryData, secondQueryData);
@@ -214,15 +215,15 @@ namespace ReconRunner.Controller
         /// <param name="secondQueryData">May pass empty datatable for single query recons</param>
         private void createReconTab(ReconReport recon, DataTable firstQueryData, DataTable secondQueryData)
         {
-            int numQueries = recon.SecondQuery == "" ? 1 : 2;
-            if (recon.SecondQuery != "")
+            int numQueries = recon.SecondQueryName == "" ? 1 : 2;
+            if (recon.SecondQueryName != "")
                 populateIndexedRowCollections(recon, firstQueryData, secondQueryData);
             // Create a new worksheet within our spreadsheet to hold the results
             excelService.CreateWorksheet(recon.TabLabel);
             // Write the title rows
             writeWorkSheetHeaderRows(recon);
             // The next two sections are only needed for two-query recons
-            if (recon.SecondQuery != "")
+            if (recon.SecondQueryName != "")
             {
                 // Write the first section showing rows in the first query without a match in the second query
                 writeOrphanFirstQuerySection(recon);
@@ -262,7 +263,7 @@ namespace ReconRunner.Controller
                     {
                         if (column.IdentifyingColumn)
                         {
-                            rowKey += row[column.FirstQueryName].ToString();
+                            rowKey += row[column.FirstQueryColName].ToString();
                         }
                     }
                     q1Rows.Add(rowKey, row);
@@ -282,7 +283,7 @@ namespace ReconRunner.Controller
                     {
                         if (column.IdentifyingColumn)
                         {
-                            rowKey += row[column.SecondQueryName].ToString();
+                            rowKey += row[column.SecondQueryColName].ToString();
                         }
                     }
                     q2Rows.Add(rowKey, row);
@@ -307,9 +308,9 @@ namespace ReconRunner.Controller
             // Start the section with a label
             excelRow = new Dictionary<string, Cell>();
             excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
-            excelRow.Add("B", new Cell(recon.FirstQuery, CellStyle.Bold));
+            excelRow.Add("B", new Cell(recon.FirstQueryName, CellStyle.Bold));
             excelRow.Add("C", new Cell("Without a Match in", CellStyle.Bold));
-            excelRow.Add("D", new Cell(recon.SecondQuery, CellStyle.Bold));
+            excelRow.Add("D", new Cell(recon.SecondQueryName, CellStyle.Bold));
             excelService.AddRow(excelRow);
             // Now write out the common columns at the left of each section
             writeCommonHeaders(2, recon.Columns, true, true);
@@ -353,9 +354,9 @@ namespace ReconRunner.Controller
             // Start the section with a label
             excelRow = new Dictionary<string, Cell>();
             excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
-            excelRow.Add("B", new Cell(recon.SecondQuery, CellStyle.Bold));
+            excelRow.Add("B", new Cell(recon.SecondQueryName, CellStyle.Bold));
             excelRow.Add("C", new Cell("Without a Match in", CellStyle.Bold));
-            excelRow.Add("D", new Cell(recon.FirstQuery, CellStyle.Bold));
+            excelRow.Add("D", new Cell(recon.FirstQueryName, CellStyle.Bold));
             excelService.AddRow(excelRow);
             // Now write out the common columns at the left of each section
 
@@ -415,24 +416,24 @@ namespace ReconRunner.Controller
             CellStyle currStyle = CellStyle.LightBlue;
             int currColumnIndex;
             int numDifferencesFound = 0;
-            int numQueries = recon.SecondQuery == "" ? 1 : 2;
+            int numQueries = recon.SecondQueryName == "" ? 1 : 2;
             string counterText;
 
             // Start the section with a label if 2-query recon
-            if (recon.SecondQuery != "")
+            if (recon.SecondQueryName != "")
             {
                 excelRow = new Dictionary<string, Cell>();
                 excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
-                excelRow.Add("B", new Cell(recon.FirstQuery, CellStyle.Bold));
+                excelRow.Add("B", new Cell(recon.FirstQueryName, CellStyle.Bold));
                 excelRow.Add("C", new Cell("that have one or more", CellStyle.Bold));
                 excelRow.Add("D", new Cell("differences compared to", CellStyle.Bold));
-                excelRow.Add("E", new Cell(recon.SecondQuery, CellStyle.Bold));
+                excelRow.Add("E", new Cell(recon.SecondQueryName, CellStyle.Bold));
                 excelService.AddRow(excelRow);
             }
             // Now write out the common columns at the left of each section
             // If a 1 query recon then we don't need extra columns and should add the header row as is
-            currColumnIndex = writeCommonHeaders(numQueries, recon.Columns, recon.SecondQuery == "", false);
-            if (recon.SecondQuery != "")
+            currColumnIndex = writeCommonHeaders(numQueries, recon.Columns, recon.SecondQueryName == "", false);
+            if (recon.SecondQueryName != "")
             {
                 // We have to add three more columns: one to list the item the differences was found in, and then
                 // two columns to show the two values found.
@@ -443,7 +444,7 @@ namespace ReconRunner.Controller
             }
             // Now go through the queries and write one row per row returned in the case of 1-query recons or one row
             // per difference found in the case of 2-query recons
-            if (recon.SecondQuery == "")
+            if (recon.SecondQueryName == "")
             {
                 // Write out rows for 1-query recons
                 if (firstQueryData.Rows.Count == 0)
@@ -462,7 +463,7 @@ namespace ReconRunner.Controller
                         // Always show all columns on a 1-query recon
                         for (int n = 0; n < recon.Columns.Count; n++)
                         {
-                            excelRow.Add(columnLetters[n].ToString(), new Cell(row[recon.Columns[n].FirstQueryName].ToString(), currStyle));
+                            excelRow.Add(columnLetters[n].ToString(), new Cell(row[recon.Columns[n].FirstQueryColName].ToString(), currStyle));
                         }
                         excelService.AddRow(excelRow);
                     }
@@ -485,7 +486,7 @@ namespace ReconRunner.Controller
                         {
                             if (column.ShouldMatch)
                             {
-                                if (!valuesMatch(q1Rows[rowKey][column.FirstQueryName], q2Rows[rowKey][column.SecondQueryName], column.Type))
+                                if (!valuesMatch(q1Rows[rowKey][column.FirstQueryColName], q2Rows[rowKey][column.SecondQueryColName], column.Type))
                                 {
                                     // We have a mismatch that needs to be reported
                                     // First, write the identifying and 'Always Display' columns, and get the column index we're at
@@ -493,8 +494,8 @@ namespace ReconRunner.Controller
                                     // Now write out the three columns regarding the difference found: 
                                     //      column name, first query value, and second query value
                                     excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(column.Label, currStyle));
-                                    excelRow.Add(columnLetters[currColumnIndex + 1].ToString(), new Cell(q1Rows[rowKey][column.FirstQueryName].ToString(), currStyle));
-                                    excelRow.Add(columnLetters[currColumnIndex + 2].ToString(), new Cell(q2Rows[rowKey][column.SecondQueryName].ToString(), currStyle));
+                                    excelRow.Add(columnLetters[currColumnIndex + 1].ToString(), new Cell(q1Rows[rowKey][column.FirstQueryColName].ToString(), currStyle));
+                                    excelRow.Add(columnLetters[currColumnIndex + 2].ToString(), new Cell(q2Rows[rowKey][column.SecondQueryColName].ToString(), currStyle));
                                     // Finally, add this row to the recon report
                                     excelService.AddRow(excelRow);
                                     ++numDifferencesFound;
@@ -606,11 +607,11 @@ namespace ReconRunner.Controller
                 {
                     if (section == reportSection.FirstQueryRowWithoutMatch)
                     {
-                        columnName = queryColumn.FirstQueryName;
+                        columnName = queryColumn.FirstQueryColName;
                     }
                     else
                     {
-                        columnName = queryColumn.SecondQueryName;
+                        columnName = queryColumn.SecondQueryColName;
                     }
                     excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(row[columnName].ToString(), formatType));
                     ++currColumnIndex;
@@ -624,11 +625,11 @@ namespace ReconRunner.Controller
                 {
                     if (section == reportSection.FirstQueryRowWithoutMatch)
                     {
-                        columnName = queryColumn.FirstQueryName;
+                        columnName = queryColumn.FirstQueryColName;
                     }
                     else
                     {
-                        columnName = queryColumn.SecondQueryName;
+                        columnName = queryColumn.SecondQueryColName;
                     }
                     // Some columns marked 'AlwaysDisplay' may not exist on one of the two queries
                     if (columnName != null)
@@ -664,7 +665,7 @@ namespace ReconRunner.Controller
                 queryColumn = columns[i];
                 if (queryColumn.IdentifyingColumn)
                 {
-                    excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(q1Row[queryColumn.FirstQueryName].ToString(), formatType));
+                    excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(q1Row[queryColumn.FirstQueryColName].ToString(), formatType));
                     ++currColumnIndex;
                 }
             }
@@ -677,13 +678,13 @@ namespace ReconRunner.Controller
                     // Some columns marked 'AlwaysDisplay' may not exist on one of the two queries.
                     // Use value on first query if it exists on either the first query or both, otherwise use
                     // the value in the second query.
-                    if (queryColumn.FirstQueryName != null)
+                    if (queryColumn.FirstQueryColName != null)
                     {
-                        columnValue = q1Row[queryColumn.FirstQueryName].ToString();
+                        columnValue = q1Row[queryColumn.FirstQueryColName].ToString();
                     }
                     else
                     {
-                        columnValue = q2Row[queryColumn.SecondQueryName].ToString();
+                        columnValue = q2Row[queryColumn.SecondQueryColName].ToString();
                     }
                     excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(columnValue, formatType));
                     ++currColumnIndex;
@@ -735,7 +736,7 @@ namespace ReconRunner.Controller
                 {
                     // Let the user know if this column is found in just the first
                     // query (1) or just the second query (2)
-                    if (queryColumn.FirstQueryName != null && queryColumn.SecondQueryName != null)
+                    if (queryColumn.FirstQueryColName != null && queryColumn.SecondQueryColName != null)
                     {
                         if (queryColumn.ShouldMatch)
                         {
@@ -748,7 +749,7 @@ namespace ReconRunner.Controller
                     }
                     else
                     {
-                        if (queryColumn.FirstQueryName == null)
+                        if (queryColumn.FirstQueryColName == null)
                         {
                             columnAttribute = "(2)";
                         }
@@ -782,17 +783,17 @@ namespace ReconRunner.Controller
             excelService.AddRow(excelRow);
             // Sub-title row with names of queries
             excelRow.Clear();
-            if (recon.SecondQuery != "")
+            if (recon.SecondQueryName != "")
             {
                 excelRow.Add("A", new Cell("Comparing"));
-                excelRow.Add("B", new Cell(recon.FirstQuery));
+                excelRow.Add("B", new Cell(recon.FirstQueryName));
                 excelRow.Add("C", new Cell("to"));
-                excelRow.Add("D", new Cell(recon.SecondQuery));
+                excelRow.Add("D", new Cell(recon.SecondQueryName));
             }
             else
             {
                 excelRow.Add("A", new Cell("Rows returned by"));
-                excelRow.Add("B", new Cell(recon.FirstQuery));
+                excelRow.Add("B", new Cell(recon.FirstQueryName));
             }
             excelService.AddRow(excelRow);
             // Write row with query variable values
@@ -814,7 +815,7 @@ namespace ReconRunner.Controller
 
             // Sub-title row with key to column header names
             // Only add if two-query recon
-            if (recon.SecondQuery != "")
+            if (recon.SecondQueryName != "")
             {
                 excelRow.Clear();
                 excelRow.Add("A", new Cell("(Id) = Part of Unique ID", CellStyle.Italic));
@@ -842,9 +843,7 @@ namespace ReconRunner.Controller
         {
             var validationErrors = new List<string>();
             validationErrors.AddRange(validateSources());
-            validationErrors.AddRange(validateRecons());
-            // Sources
-            
+            validationErrors.AddRange(validateRecons());  
             return validationErrors;
         }
 
@@ -857,6 +856,7 @@ namespace ReconRunner.Controller
         {
             var sourcesMessages = new List<string>();
             var sourcesErrors = new List<string>();
+
             // First check if we have a possibly-complete set of info to check.  If not, don't go any further.
             if (sources.ConnStringTemplates.Count == 0 || sources.ConnectionStrings.Count == 0 || sources.Queries.Count == 0)
             {
@@ -867,10 +867,48 @@ namespace ReconRunner.Controller
             // No duplicate names
             var templateNames = (from csTemplate in sources.ConnStringTemplates
                                  select csTemplate.Name).ToList();
-            if (getDuplicateEntries(templateNames).Count() > 0)
-                sourcesErrors.Add(string.Format("Sources: One or more duplicate ConnectionString template names found"));
-            
-            
+            var dupNames = getDuplicateEntries(templateNames);
+            if (dupNames != string.Empty)
+                sourcesErrors.Add(string.Format("Sources: Duplicate template name(s) found: {0}", dupNames));
+
+            // Connection Strings
+            // No duplicate names
+            var connStringNames = (from connString in sources.ConnectionStrings
+                                 select connString.Name).ToList();
+            dupNames = getDuplicateEntries(connStringNames);
+            if (dupNames != string.Empty)
+                sourcesErrors.Add(string.Format("Sources: Duplicate connection string name(s) found: {0}", dupNames));
+            sources.ConnectionStrings.ForEach(cs =>
+            {
+                // Template exists
+                if (!templateNames.Contains(cs.TemplateName))
+                    sourcesErrors.Add(string.Format("Sources: The connection string {0} refers to non-existent template {1}", cs.Name, cs.TemplateName));
+                else
+                {
+                    // Template is valid, now make sure connection string supplies values for all placeholders
+                    var templateString = sources.ConnStringTemplates.First(template => template.Name == cs.TemplateName).Template;
+                    var matches = (from Match match in Regex.Matches(templateString, pipePlaceholderRegex)
+                                   select match.Groups[1].Value).ToList();
+                    var csVariableNames = (from csVariable in cs.TemplateVariables
+                                           select csVariable.SubName).ToList();
+                    matches.ForEach(placeholder =>
+                    {
+                        if (!csVariableNames.Contains(placeholder))
+                            sourcesErrors.Add(string.Format("Sources: The connection string {0} is missing a value for the placeholder {1} in its template {2}", cs.Name, placeholder, cs.TemplateName));
+                    });
+                    // No duplicate connection string variable names
+                    dupNames = getDuplicateEntries(csVariableNames);
+                    if (dupNames != string.Empty)
+                        sourcesErrors.Add(string.Format("Sources: The connection string {0} has duplicate variable names: {1}", cs.Name, dupNames));
+                }
+            });
+            // Queries
+            // Connection string exists
+            sources.Queries.ForEach(query =>
+            {
+                if (!connStringNames.Contains(query.ConnStringName))
+                    sourcesErrors.Add(string.Format("Sources: The query {0} refers to non-existent connection string {1}", query.Name, query.ConnStringName));
+            });
             return sourcesErrors;
         }
 
@@ -883,22 +921,78 @@ namespace ReconRunner.Controller
                 reconsErrors.Add("Recons: Not loaded yet. A recon XML file w/at least one recon specified must be loaded.");
                 return reconsErrors;
             }
-
+            else
+            {
+                // Duplicate recon names
+                var dupNames = getDuplicateEntries((from recon in recons.ReconList select recon.Name).ToList());
+                if (dupNames != string.Empty)
+                    reconsErrors.Add(string.Format("Recons: Duplicate recon report name(s) found: {0}", dupNames));
+                // Duplicate tab labels
+                dupNames = getDuplicateEntries((from recon in recons.ReconList select recon.TabLabel).ToList());
+                if (dupNames != string.Empty)
+                    reconsErrors.Add(string.Format("Recons: Duplicate recon tab label(s) found: {0}", dupNames));
+                // Check associated queries
+                var queryNames = (from query in sources.Queries select query.Name).ToList();
+                recons.ReconList.ForEach(recon =>
+                {
+                    // Check first query exists, and if so are all placeholders given a value
+                    if (!queryNames.Contains(recon.FirstQueryName))
+                        reconsErrors.Add(string.Format("Recons: the recon {0} has a non-existent first query called {1}", recon.Name, recon.FirstQueryName));
+                    else
+                    {
+                        var firstQuerySql = sources.Queries.Find(query => query.Name == recon.FirstQueryName).SQL.ToString();
+                        var matches = (from Match match in Regex.Matches(firstQuerySql, pipePlaceholderRegex)
+                                       select match.Groups[1].Value).ToList();
+                        var firstQueryVariables = (from queryVariable in recon.QueryVariables
+                                                   where !queryVariable.QuerySpecific || (queryVariable.QueryNumber == 1) 
+select queryVariable.SubName).ToList();
+                        matches.ForEach(placeholder =>
+                        {
+                            if (!firstQueryVariables.Contains(placeholder))
+                                reconsErrors.Add(string.Format("Recons: The recon {0} does not supply a placeholder value for {1} in query {2}", recon.Name, placeholder, recon.FirstQueryName));
+                        });
+                        // No duplicate variable names for first query
+                        dupNames = getDuplicateEntries(firstQueryVariables);
+                        if (dupNames != string.Empty)
+                            reconsErrors.Add(string.Format("Recons: For recon {0} duplicate query variable(s) found {1} for first query {2}", recon.Name, dupNames, recon.FirstQueryName));
+                    };
+                    // If second query used, check it exists and all placeholders are given a value
+                    if (recon.SecondQueryName != string.Empty)
+                    {
+                        if (!queryNames.Contains(recon.SecondQueryName))
+                            reconsErrors.Add(string.Format("Recons: The recon {0} has a non-existent second query called {1}", recon.Name, recon.SecondQueryName));
+                        else
+                        {
+                            var secondQuerySql = sources.Queries.Find(query => query.Name == recon.SecondQueryName).SQL.ToString();
+                            var matches = (from Match match in Regex.Matches(secondQuerySql, pipePlaceholderRegex)
+                                           select match.Groups[1].Value).ToList();
+                            var secondQueryVariables = (from queryVariable in recon.QueryVariables
+                                                        where !queryVariable.QuerySpecific || (queryVariable.QueryNumber == 2)
+                                                        select queryVariable.SubName).ToList();
+                            matches.ForEach(placeholder =>
+                            {
+                                if (!secondQueryVariables.Contains(placeholder))
+                                    reconsErrors.Add(string.Format("Recons: The recon {0} does not supply a placeholder value for {1} in query {2}", recon.Name, placeholder, recon.SecondQueryName));
+                            });
+                            // No duplicate variable names for second query
+                            dupNames = getDuplicateEntries(secondQueryVariables);
+                            if (dupNames != string.Empty)
+                                reconsErrors.Add(string.Format("Recons: For recon {0} duplicate query variable(s) found {1} for second query {2}", recon.Name, dupNames, recon.SecondQueryName));
+                        }
+                    }
+                    // Any variables that are QuerySpecific but don't have QueryNumber of 1 or 2
+                    var invalidQueryVariables = (from queryVariable in recon.QueryVariables
+                                                 where queryVariable.QuerySpecific && queryVariable.QueryNumber != 1 && queryVariable.QueryNumber != 2
+                                                 select queryVariable.SubName).ToList();
+                    if (invalidQueryVariables.Count() > 0)
+                    {
+                        var invalidVarNames = string.Join(",", invalidQueryVariables);
+                        reconsErrors.Add(string.Format("Recons: For recon {0} the query variable(s) {1} are invalid because marked query specific but have QueryNumber other than 1 or 2", recon.Name, invalidVarNames));
+                    }
+                });
+            } 
             return reconsErrors;
         }
-
-        /// <summary>
-        /// Perform various checks for any issues to be considered
-        /// warnings (ie they may be worth noting but won't stop the 
-        /// recons from running successfully)
-        /// </summary>
-        /// <returns>List with one line per warning</returns>
-        public List<string> GetValidationWarnings()
-        {
-            // TODO Implement check for any warnings
-            return new List<string>();
-        }
-
 
         /// <summary>
         /// Identify duplicate entries in a list of strings
