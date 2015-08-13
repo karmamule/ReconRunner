@@ -155,8 +155,11 @@ namespace RRUnitTest
             rrController.Recons.ReconReports[0].QueryVariables.Add(new QueryVariable { SubName = "XYZ123987", SubValue = "0", QuerySpecific = false, QueryNumber = 0 });
             Assert.IsFalse(rrController.ReadyToRun(), "Did not detect a non-query specific recon placeholder not referenced by any query.");
             rrController.UseSampleData();
-            rrController.Recons.ReconReports.Find(recon => recon.SecondQueryName != string.Empty).QueryVariables.Add(new QueryVariable { SubName = "XYZ123987", SubValue = "0", QuerySpecific = true, QueryNumber = 1 });
-            Assert.IsFalse(rrController.ReadyToRun(), "Did not detect a query specific recon placeholder not referenced in specified query.");
+            rrController.Recons.ReconReports[0].QueryVariables.Add(new QueryVariable { SubName = "XYZ123987", SubValue = "0", QuerySpecific = true, QueryNumber = 1 });
+            Assert.IsFalse(rrController.ReadyToRun(), "Did not detect a first-query specific recon placeholder not referenced in specified query.");
+            rrController.UseSampleData();
+            rrController.Recons.ReconReports.Find(recon => recon.SecondQueryName != string.Empty).QueryVariables.Add(new QueryVariable { SubName = "XYZ123987", SubValue = "0", QuerySpecific = true, QueryNumber = 2 });
+            Assert.IsFalse(rrController.ReadyToRun(), "Did not detect a second-query specific recon placeholder not referenced in specified query.");
         }
         #endregion Test Validation Logic
     }

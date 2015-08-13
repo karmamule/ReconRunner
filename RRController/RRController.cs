@@ -895,7 +895,7 @@ namespace ReconRunner.Controller
                     sourcesErrors.Add(string.Format("Sources: The connection string {0} refers to non-existent template {1}", cs.Name, cs.TemplateName));
                 else
                 {
-                    // Template is valid, now make sure connection string supplies values for all placeholders
+                    // Template is valid, now make sure connection string supplies values for all placeholders and all placeholders are known
                     var templateString = sources.ConnStringTemplates.First(template => template.Name == cs.TemplateName).Template;
                     var matches = (from Match match in Regex.Matches(templateString, pipePlaceholderRegex)
                                    select match.Groups[1].Value).ToList();
@@ -905,6 +905,11 @@ namespace ReconRunner.Controller
                     {
                         if (!csVariableNames.Contains(placeholder))
                             sourcesErrors.Add(string.Format("Sources: The connection string {0} is missing a value for the placeholder {1} in its template {2}", cs.Name, placeholder, cs.TemplateName));
+                    });
+                    csVariableNames.ForEach(variable =>
+                    {
+                        if (!matches.Contains(variable))
+                            sourcesErrors.Add(string.Format("Sources: The connection string {0} has a variable {1} that does not have a placeholder in its template {2}", cs.Name, variable, cs.TemplateName));
                     });
                     // No duplicate connection string variable names
                     dupNames = getDuplicateEntries(csVariableNames);
@@ -942,53 +947,59 @@ namespace ReconRunner.Controller
                 dupNames = getDuplicateEntries((from recon in recons.ReconReports select recon.TabLabel).ToList());
                 if (dupNames != string.Empty)
                     reconsErrors.Add(string.Format("Recons: Duplicate recon tab label(s) found: {0}", dupNames));
+                List<string> allQueryPlaceholders = new List<string>();
+                // Test for any query-specific issues for the recon
                 recons.ReconReports.ForEach(recon =>
                 {
-                    // Check first query exists, and if so are all placeholders given a value
-                    if (!queryNames.Contains(recon.FirstQueryName))
-                        reconsErrors.Add(string.Format("Recons: the recon {0} has a non-existent first query called {1}", recon.Name, recon.FirstQueryName));
-                    else
+                    List<string> reconQueryNames = new List<string> { recon.FirstQueryName, recon.SecondQueryName };
+                    for (int queryNum = 1; queryNum <= 2; queryNum++)
                     {
-                        var firstQuerySql = sources.Queries.Find(query => query.Name == recon.FirstQueryName).SQL.ToString();
-                        var matches = (from Match match in Regex.Matches(firstQuerySql, pipePlaceholderRegex)
-                                       select match.Groups[1].Value).ToList();
-                        var firstQueryVariables = (from queryVariable in recon.QueryVariables
-                                                   where !queryVariable.QuerySpecific || (queryVariable.QueryNumber == 1) 
-                                                   select queryVariable.SubName).ToList();
-                        matches.ForEach(placeholder =>
+                        string reconQueryName = reconQueryNames[queryNum - 1];
+                        // If query name is not empty, check query exists in source. If that's true continue on to check all related placeholders are given a value
+                        if (reconQueryName != string.Empty)
                         {
-                            if (!firstQueryVariables.Contains(placeholder))
-                                reconsErrors.Add(string.Format("Recons: The recon {0} does not supply a placeholder value for {1} in query {2}", recon.Name, placeholder, recon.FirstQueryName));
-                        });
-                        // No duplicate variable names for first query
-                        dupNames = getDuplicateEntries(firstQueryVariables);
-                        if (dupNames != string.Empty)
-                            reconsErrors.Add(string.Format("Recons: For recon {0} duplicate query variable(s) found {1} for first query {2}", recon.Name, dupNames, recon.FirstQueryName));
-                    };
-                    // If second query used, check it exists and all placeholders are given a value
-                    if (recon.SecondQueryName != string.Empty)
-                    {
-                        if (!queryNames.Contains(recon.SecondQueryName))
-                            reconsErrors.Add(string.Format("Recons: The recon {0} has a non-existent second query called {1}", recon.Name, recon.SecondQueryName));
-                        else
-                        {
-                            var secondQuerySql = sources.Queries.Find(query => query.Name == recon.SecondQueryName).SQL.ToString();
-                            var matches = (from Match match in Regex.Matches(secondQuerySql, pipePlaceholderRegex)
-                                           select match.Groups[1].Value).ToList();
-                            var secondQueryVariables = (from queryVariable in recon.QueryVariables
-                                                        where !queryVariable.QuerySpecific || (queryVariable.QueryNumber == 2)
-                                                        select queryVariable.SubName).ToList();
-                            matches.ForEach(placeholder =>
+                            if (!queryNames.Contains(reconQueryName))
+                                reconsErrors.Add(string.Format("Recons: the recon {0} refers to a non-existent query called {1}", recon.Name, reconQueryName));
+                            else
                             {
-                                if (!secondQueryVariables.Contains(placeholder))
-                                    reconsErrors.Add(string.Format("Recons: The recon {0} does not supply a placeholder value for {1} in query {2}", recon.Name, placeholder, recon.SecondQueryName));
-                            });
-                            // No duplicate variable names for second query
-                            dupNames = getDuplicateEntries(secondQueryVariables);
-                            if (dupNames != string.Empty)
-                                reconsErrors.Add(string.Format("Recons: For recon {0} duplicate query variable(s) found {1} for second query {2}", recon.Name, dupNames, recon.SecondQueryName));
-                        }
-                    }
+                                var querySql = sources.Queries.Find(query => query.Name == reconQueryName).SQL.Value;
+                                var queryPlaceholders = (from Match match in Regex.Matches(querySql.ToString(), pipePlaceholderRegex)
+                                                         select match.Groups[1].Value).ToList();
+                                allQueryPlaceholders = allQueryPlaceholders.Union(queryPlaceholders).ToList();
+                                var queryVariableNames = (from queryVariable in recon.QueryVariables
+                                                          where !queryVariable.QuerySpecific || (queryVariable.QueryNumber == queryNum)
+                                                          select queryVariable.SubName).ToList();
+                                queryPlaceholders.ForEach(placeholder =>
+                                {
+                                    if (!queryVariableNames.Contains(placeholder))
+                                        reconsErrors.Add(string.Format("Recons: The recon {0} does not supply a placeholder value for {1} in query {2}", recon.Name, placeholder, reconQueryName));
+                                });
+                                // Make sure all variables listed as specific to the query have a corresponding placeholder in the related query
+                                var querySpecificVarNames = (from queryVariable in recon.QueryVariables
+                                                             where queryVariable.QueryNumber == queryNum
+                                                             select queryVariable.SubName).ToList();
+                                querySpecificVarNames.ForEach(queryVarName =>
+                                {
+                                    if (!queryPlaceholders.Contains(queryVarName))
+                                        reconsErrors.Add(string.Format("Recons: The recon {0} has a variable {1} for the query {2} with no corresponding placeholder in the query's sql", recon.Name, queryVarName, reconQueryName));
+                                });
+                                // No duplicate variable names for first query
+                                dupNames = getDuplicateEntries(queryVariableNames);
+                                if (dupNames != string.Empty)
+                                    reconsErrors.Add(string.Format("Recons: For recon {0} duplicate query variable(s) found {1} for first query {2}", recon.Name, dupNames, recon.FirstQueryName));
+                            };
+                        };
+                    };
+                    // Any non-query specific variables that are not used by either query
+                    var nonSpecificVarNames = (from queryVariable in recon.QueryVariables
+                                               where !queryVariable.QuerySpecific
+                                               select queryVariable.SubName).ToList();
+                    nonSpecificVarNames.ForEach(queryVarName =>
+                    {
+                        if (!allQueryPlaceholders.Contains(queryVarName))
+                            reconsErrors.Add(string.Format("Recons: The recon {0} has a non-query specific variable {1} with no corresponding placeholder any related SQL", recon.Name, queryVarName));
+                    });
+
                     // Any variables that are QuerySpecific but don't have QueryNumber of 1 or 2
                     var invalidQueryVariables = (from queryVariable in recon.QueryVariables
                                                  where queryVariable.QuerySpecific && queryVariable.QueryNumber != 1 && queryVariable.QueryNumber != 2
@@ -1004,7 +1015,6 @@ namespace ReconRunner.Controller
                     var checkDataMatchCols = (from col in recon.Columns
                                               where col.CheckDataMatch == true
                                               select col.Label).ToList();
-                    // Tests specific to single-query recons
                     if (recon.SecondQueryName == string.Empty)
                     {
                         if (identCols.Count() > 0)
