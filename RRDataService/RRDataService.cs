@@ -108,7 +108,7 @@ namespace ReconRunner.Model
         {
             try
             {
-                recons.ReconList.ForEach(openReconConnections);
+                recons.ReconReports.ForEach(openReconConnections);
             }   
             catch (Exception ex)
             {

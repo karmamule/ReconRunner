@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
@@ -424,11 +425,11 @@ namespace ReconRunner.Model
     [XmlRoot("Recons")]
     public class Recons
     {
-        List<ReconReport> reconList;
+        List<ReconReport> reconReports;
 
         public Recons() 
         {
-            reconList = new List<ReconReport>();
+            reconReports = new List<ReconReport>();
         }
 
         /// <summary>
@@ -436,13 +437,14 @@ namespace ReconRunner.Model
         /// the order they're run in.
         /// </summary>
         [XmlElement("ReconReport")]
-        public List<ReconReport> ReconList
+        public List<ReconReport> ReconReports
         {
-            get { return reconList; }
-            set { reconList = value; }
+            get { return reconReports; }
+            set { reconReports = value; }
         }
 
     }
+
 
     #endregion Reports
 }

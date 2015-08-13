@@ -208,7 +208,7 @@ namespace ReconRunner.Model
                 new QueryVariable { SubName = "DateWanted", SubValue = "30-jul-2015", QuerySpecific=true, QueryNumber=1 },
                 new QueryVariable { SubName = "DateWanted", SubValue = "31-jul-2015",QuerySpecific=true, QueryNumber=2 }
             };
-            sampleRecons.ReconList.Add(warehousePortGicsRecon);
+            sampleRecons.ReconReports.Add(warehousePortGicsRecon);
 
             // Note that queries running on two separate platforms may still be compared
             ReconReport edmDalPortDayPositionRecon = new ReconReport();
@@ -284,7 +284,7 @@ namespace ReconRunner.Model
                 new QueryVariable { SubName = "EdmDateWanted", SubValue = "01-jul-2014", QuerySpecific=false }, 
                 new QueryVariable { SubName = "DalDateWanted", SubValue = "1140701",QuerySpecific=false }                                                                          
             };
-            sampleRecons.ReconList.Add(edmDalPortDayPositionRecon);
+            sampleRecons.ReconReports.Add(edmDalPortDayPositionRecon);
 
             // This recon is an example of a recon with just one query, and any rows returned are assumed to
             // indicate an issue and will be reported
@@ -313,7 +313,7 @@ namespace ReconRunner.Model
             positionsMissingFkRecon.Columns.Add(missingEntity);
             positionsMissingFkRecon.Columns.Add(originalEntityId);
 
-            sampleRecons.ReconList.Add(positionsMissingFkRecon);
+            sampleRecons.ReconReports.Add(positionsMissingFkRecon);
         }
 
         public void WriteSampleReconsToXMLFile(string fileName)

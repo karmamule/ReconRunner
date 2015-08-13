@@ -164,7 +164,7 @@ namespace ReconRunner.Controller
         /// <returns>A string with information on the run (success/failure/reports run/etc.)</returns>
         public string RunRecons(string excelFileName)
         {
-            if (sources.Queries.Count == 0 || recons.ReconList.Count == 0)
+            if (sources.Queries.Count == 0 || recons.ReconReports.Count == 0)
                 throw new Exception("Either sources or recons not specified");
 
             string results = "";
@@ -182,9 +182,9 @@ namespace ReconRunner.Controller
 
             try
             {
-                for (int i = 0; i < recons.ReconList.Count; i++)
+                for (int i = 0; i < recons.ReconReports.Count; i++)
                 {
-                    ReconReport recon = recons.ReconList[i];
+                    ReconReport recon = recons.ReconReports[i];
                     results += "Running " + recon.Name + "\r\n";
                         // Get the data from the two queries that will be compared
                         // getQueriesData(recon, ref firstQueryData, ref secondQueryData);
@@ -926,7 +926,7 @@ namespace ReconRunner.Controller
         {
             var reconsErrors = new List<string>();
             // First check if we have a possibly-complete set of info to check.  If not, don't go any further.
-            if (recons.ReconList.Count() == 0)
+            if (recons.ReconReports.Count() == 0)
             {
                 reconsErrors.Add("Recons: Not loaded yet. A recon XML file w/at least one recon specified must be loaded.");
                 return reconsErrors;
@@ -935,14 +935,14 @@ namespace ReconRunner.Controller
             {
                 var queryNames = (from query in sources.Queries select query.Name).ToList();
                 // Duplicate recon names
-                var dupNames = getDuplicateEntries((from recon in recons.ReconList select recon.Name).ToList());
+                var dupNames = getDuplicateEntries((from recon in recons.ReconReports select recon.Name).ToList());
                 if (dupNames != string.Empty)
                     reconsErrors.Add(string.Format("Recons: Duplicate recon report name(s) found: {0}", dupNames));
                 // Duplicate tab labels
-                dupNames = getDuplicateEntries((from recon in recons.ReconList select recon.TabLabel).ToList());
+                dupNames = getDuplicateEntries((from recon in recons.ReconReports select recon.TabLabel).ToList());
                 if (dupNames != string.Empty)
                     reconsErrors.Add(string.Format("Recons: Duplicate recon tab label(s) found: {0}", dupNames));
-                recons.ReconList.ForEach(recon =>
+                recons.ReconReports.ForEach(recon =>
                 {
                     // Check first query exists, and if so are all placeholders given a value
                     if (!queryNames.Contains(recon.FirstQueryName))
@@ -1068,6 +1068,7 @@ namespace ReconRunner.Controller
         /// </summary>
         public void UseSampleData()
         {
+            var rrSerializer = new RRSerializer();
             sources = rrSerializer.SampleSources;
             recons = rrSerializer.SampleRecons;
         }

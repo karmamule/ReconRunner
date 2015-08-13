@@ -40,7 +40,7 @@
                        ToolTip="Information on file validation and/or recon run status will appear here." Background="White" />
         </ScrollViewer>
         <Button x:Name="btnCreateSamples" Content="Create Sample Files" HorizontalAlignment="Left" Margin="362,6,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Grid.Row="2" Click="btnCreateSamples_Click"/>
-        <Button x:Name="btnValidate" Content="Validate" HorizontalAlignment="Left" Margin="160,10,0,0" VerticalAlignment="Top" Width="127" IsEnabled="False" ToolTip="If button enabled you may see if there are any validation details. If not enabled, either no data is loaded or there are no issues." ToolTipService.ShowOnDisabled="True" Click="btnValidate_Click" RenderTransformOrigin="0.449,-0.864"/>
+        <Button x:Name="btnValidate" Content="Validation Errors" HorizontalAlignment="Left" Margin="160,10,0,0" VerticalAlignment="Top" Width="127" ToolTip="Only enabled if there are validation issues" ToolTipService.ShowOnDisabled="True" Click="btnValidate_Click" RenderTransformOrigin="0.449,-0.864"/>
 
     </Grid>
 </Window>
