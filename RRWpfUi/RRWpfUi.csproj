@@ -101,9 +101,9 @@
     <Resource Include="Resources\shell32_62999.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ExcelService\ExcelService.csproj">
+    <ProjectReference Include="..\ExcelService\RRExcelService.csproj">
       <Project>{7872c108-6ca7-47b4-a95e-f6e4a42c2883}</Project>
-      <Name>ExcelService</Name>
+      <Name>RRExcelService</Name>
     </ProjectReference>
     <ProjectReference Include="..\RRController\RRController.csproj">
       <Project>{7bcc759a-b30e-44e2-908b-adc1805d23ff}</Project>

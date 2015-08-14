@@ -15,10 +15,10 @@ namespace ReconRunner.Model
         #region Constructors
         private static RRDataService instance = new RRDataService();
         public static RRDataService Instance { get { return instance; } }
-        private static RRSerializer serializer = new RRSerializer();
 
-        private Sources sources;
-        private Recons recons;
+        private RRFileService rrFileService = RRFileService.Instance;
+        
+
         // A set of open connections available for use
         // Use OpenConnections() and CloseConnections() to manage them for a given recon
         // Note connections can be of type TdConnection (for Teradata) or OleDbConnection (for anything else)
@@ -29,6 +29,19 @@ namespace ReconRunner.Model
 
         }
 
+        private Sources sources = new Sources();
+        public Sources Sources
+        {
+            get { return sources; }
+            set { sources = value; }
+        }
+
+        private Recons recons = new Recons();
+        public Recons Recons
+        {
+            get { return recons; }
+            set { recons = value; }
+        }
         
         /// <summary>
         /// The method OpenConnections() should be called before attempting any
@@ -45,24 +58,25 @@ namespace ReconRunner.Model
             if (sources == null)
                 throw new Exception("RRDataService: Sources not provided yet");
             var reconData = new List<DataTable>();
-            try
+            // UPDATED 13 Aug 2015 ejy
+            // Now only pass queryvariables that are either specific to the query being run
+            // or are set to be non-query-specific
+            // Get data for first query
+            var firstQuery = sources.Queries.Single(query => query.Name == recon.FirstQueryName);
+            var queryVariables = (from queryVariable in recon.QueryVariables
+                                    where queryVariable.QueryNumber == 1 || !queryVariable.QuerySpecific
+                                    select queryVariable).ToList();
+            reconData.Add(getQueryDataTable(firstQuery, queryVariables));
+            // If necessary, get data for second query
+            if (recon.SecondQueryName != "")
             {
-                // Get data for first query
-                var firstQuery = sources.Queries.Single(query => query.Name == recon.FirstQueryName);
-                reconData.Add(getQueryDataTable(firstQuery, recon.QueryVariables));
-                // If necessary, get data for second query
-                if (recon.SecondQueryName != "")
-                {
-                    var secondQuery = sources.Queries.Single(query => query.Name == recon.SecondQueryName);
-                    reconData.Add(getQueryDataTable(secondQuery, recon.QueryVariables));
-                }
-                return reconData;
+                var secondQuery = sources.Queries.Single(query => query.Name == recon.SecondQueryName);
+                queryVariables = (from queryVariable in recon.QueryVariables
+                                    where queryVariable.QueryNumber == 2 || !queryVariable.QuerySpecific
+                                    select queryVariable).ToList();
+                reconData.Add(getQueryDataTable(secondQuery, queryVariables));
             }
-            catch (Exception ex)
-            {
-                CloseConnections();
-                throw new Exception("Problem running first query: " + getFullErrorMessage(ex));
-            }
+            return reconData;
         }
 
         /// <summary>
@@ -74,34 +88,52 @@ namespace ReconRunner.Model
         /// <returns></returns>
         private DataTable getQueryDataTable(RRQuery query, List<QueryVariable> queryVariables)
         {
-            var dataSet = new DataSet();
-            // Get the connection for the query.     
-            var firstQueryDbConn = openConnections.Single(conn => conn.Key == query.ConnStringName).Value;
-            // Get the query's sql and perf
-            var firstQuerySql = buildQuerySql(queryVariables, query.SQL.Value);
-            var connType = firstQueryDbConn.GetType();
-            if (connType.Name == "OleDbConnection")
+            var querySql = buildQuerySql(queryVariables, query.SQL.Value);
+            try
             {
-                // It's an Ole DB connection
-                var firstQueryConn = (OleDbConnection)firstQueryDbConn;
-                using (OleDbCommand command = new OleDbCommand(firstQuerySql, firstQueryConn))
-                using (OleDbDataAdapter adapter = new OleDbDataAdapter(command))
-                    adapter.Fill(dataSet);
-                return dataSet.Tables[0];
+                var dataSet = new DataSet();
+                // Get the connection for the query.     
+                var firstQueryDbConn = openConnections.Single(conn => conn.Key == query.ConnStringName).Value;
+                var connType = firstQueryDbConn.GetType();
+                if (connType.Name == "OleDbConnection")
+                {
+                    // It's an Ole DB connection
+                    var firstQueryConn = (OleDbConnection)firstQueryDbConn;
+                    using (OleDbCommand command = new OleDbCommand(querySql, firstQueryConn))
+                    using (OleDbDataAdapter adapter = new OleDbDataAdapter(command))
+                        adapter.Fill(dataSet);
+                    return dataSet.Tables[0];
+                }
+                else
+                {
+                    // It's a teradata connection
+                    var firstQueryConn = (TdConnection)firstQueryDbConn;
+                    using (TdCommand command = new TdCommand(querySql, firstQueryConn))
+                    using (TdDataAdapter adapter = new TdDataAdapter(command))
+                        adapter.Fill(dataSet);
+                    return dataSet.Tables[0];
+                }
             }
-            else
+            catch (Exception ex)
             {
-                // It's a teradata connection
-                var firstQueryConn = (TdConnection)firstQueryDbConn;
-                using (TdCommand command = new TdCommand(firstQuerySql, firstQueryConn))
-                using (TdDataAdapter adapter = new TdDataAdapter(command))
-                    adapter.Fill(dataSet);
-                return dataSet.Tables[0];
+                CloseConnections();
+                throw new Exception(string.Format("Error {0} while running query {0} SQL {1}", getFullErrorMessage(ex), query.Name, querySql));
             }
         }
 
         /// <summary>
-        /// Go through all the queries used in recons and open their corresponding connections
+        /// Tell the dataservice to get the recons and sources in use from the 
+        /// fileservice.
+        /// </summary>
+        public void RefreshSourcesAndRecons()
+        {
+            sources = rrFileService.Sources;
+            recons = rrFileService.Recons;
+        }
+
+        /// <summary>
+        /// Go through all the queries used in recons and open their corresponding connections.  If the data service's
+        /// sources and/or recons are empty it will get new copies of each from the fileservice
         /// </summary>
         /// <param name="recons">A list of recons to be done</param>
         public void OpenConnections(Recons recons)
@@ -126,7 +158,7 @@ namespace ReconRunner.Model
         /// <param name="rr">A recon report</param>
         private void openReconConnections(ReconReport rr)
         {
-                // Open connection for first query if needed
+                // Open connection for first query 
                 try
                 {
                     var firstConnection = sources.ConnectionStrings.Where(cs => cs.Name == sources.Queries.Where(query => query.Name == rr.FirstQueryName).First().ConnStringName).First();
@@ -156,20 +188,26 @@ namespace ReconRunner.Model
                 return;
             else
             {
-                // Have not yet opened that connection, so open it and save to collection
-                var connString = buildConnectionString(connection.Name);
-                if (connection.DatabaseType == DatabaseType.Teradata)
-                {
-                    var openConnection = new TdConnection(connString);
-                    openConnection.Open();
-                    openConnections.Add(connection.Name, openConnection);
+               var connString = buildConnectionString(connection.Name);
+               try {
+                    // Have not yet opened that connection, so open it and save to collection
+                     if (connection.DatabaseType == DatabaseType.Teradata)
+                    {
+                        var openConnection = new TdConnection(connString);
+                        openConnection.Open();
+                        openConnections.Add(connection.Name, openConnection);
+                    }
+                    else
+                    {
+                        var openConnection = new OleDbConnection(connString);
+                        openConnection.Open();
+                        var connType = openConnection.GetType();
+                        openConnections.Add(connection.Name, openConnection);
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    var openConnection = new OleDbConnection(connString);
-                    openConnection.Open();
-                    var connType = openConnection.GetType();
-                    openConnections.Add(connection.Name, openConnection);
+                    throw new ApplicationException(string.Format("Error trying to open connection with {0}: {1}.", connString, getFullErrorMessage(ex)));
                 }
             }
         }

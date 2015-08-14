@@ -59,9 +59,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ExcelService\ExcelService.csproj">
+    <ProjectReference Include="..\ExcelService\RRExcelService.csproj">
       <Project>{7872C108-6CA7-47B4-A95E-F6E4A42C2883}</Project>
-      <Name>ExcelService</Name>
+      <Name>RRExcelService</Name>
     </ProjectReference>
     <ProjectReference Include="..\RRDataService\RRModel.csproj">
       <Project>{7577ee4f-7435-4681-9a3e-8f8eb1a1fa04}</Project>

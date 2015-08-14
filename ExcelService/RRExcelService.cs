@@ -5,7 +5,7 @@ using System.Text;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Drawing;
 
-namespace ExcelService
+namespace ReconRunner.ExcelService
 {
     #region Cell
     public enum CellStyle
@@ -68,10 +68,10 @@ namespace ExcelService
     }
     #endregion Cell
 
-    public class ExcelService
+    public class RRExcelService
     {
         #region private properties and class constructors
-        static readonly ExcelService instance = new ExcelService();
+        static readonly RRExcelService instance = new RRExcelService();
         private Excel.Application ecApp;
         private Excel.Workbook ecWB;
         private Excel.Worksheet ecWS;
@@ -79,16 +79,16 @@ namespace ExcelService
         private int currRowNumber = 1;
         private object missing = Type.Missing;
 
-        static ExcelService()
+        static RRExcelService()
         {
         }
-        public ExcelService()
+        public RRExcelService()
         {
         }
         #endregion
 
         #region properties
-        public static ExcelService Instance
+        public static RRExcelService Instance
         {
             get { return instance; }
         }

@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RRUI", "ReconRunner\RRUI.cs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RRController", "RRController\RRController.csproj", "{7BCC759A-B30E-44E2-908B-ADC1805D23FF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExcelService", "ExcelService\ExcelService.csproj", "{7872C108-6CA7-47B4-A95E-F6E4A42C2883}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RRExcelService", "ExcelService\RRExcelService.csproj", "{7872C108-6CA7-47B4-A95E-F6E4A42C2883}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RRModel", "RRDataService\RRModel.csproj", "{7577EE4F-7435-4681-9A3E-8F8EB1A1FA04}"
 EndProject

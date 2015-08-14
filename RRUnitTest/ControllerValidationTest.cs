@@ -20,6 +20,14 @@ namespace RRUnitTest
         }
 
         [TestMethod]
+        public void DetectNoConnections()
+        {
+            rrController.UseSampleData();
+            rrController.Sources.ConnectionStrings.Clear();
+            Assert.IsFalse(rrController.ReadyToRun(), "Did not detect when no connection strings.");
+        }
+
+        [TestMethod]
         public void DetectDupTemplateNames()
         {
             rrController.UseSampleData();

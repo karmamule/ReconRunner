@@ -29,14 +29,13 @@ namespace RRWpfUi
             {
                 txtStatus.Text += string.Format("Reading sources from file {0}.{1}", xmlFileOpenDialog.FileName, cr);
                 txtStatus.Text += rrController.ReadSourcesFromXMLFile(xmlFileOpenDialog.FileName) + cr;
-                btnRunRecons.IsEnabled = rrController.ReadyToRun();
-                btnValidate.IsEnabled = !btnRunRecons.IsEnabled;
+
             }
             else
             {
                 txtStatus.Text += "Creation of Sources collection cancelled." + cr;
-                btnRunRecons.IsEnabled = false;
             }
+            checkReadyToRun();
         }
 
         private void btnLoadRecons_Click(object sender, RoutedEventArgs e)
@@ -48,15 +47,20 @@ namespace RRWpfUi
             {
                 txtStatus.Text += string.Format("Reading recons from file {0}.{1}", xmlFileOpenDialog.FileName, cr);
                 txtStatus.Text += rrController.ReadReconsFromXMLFile(xmlFileOpenDialog.FileName) + cr;
-                btnRunRecons.IsEnabled = rrController.ReadyToRun();
-                btnValidate.IsEnabled = !btnRunRecons.IsEnabled;
             }
             else
             {
                 txtStatus.Text += "Creation of Recon collection cancelled." + cr;
-                btnRunRecons.IsEnabled = false;
             }
+            checkReadyToRun();
+        }
 
+        private void checkReadyToRun()
+        {
+            btnRunRecons.IsEnabled = rrController.ReadyToRun();
+            btnValidate.IsEnabled = !btnRunRecons.IsEnabled;
+            if (btnRunRecons.IsEnabled)
+                txtStatus.Text += "No validation errors. Ready to run recons." + cr;
         }
 
         private void btnRunRecons_Click(object sender, RoutedEventArgs e)
@@ -72,6 +76,7 @@ namespace RRWpfUi
                 {
                     txtStatus.Text += string.Format("Processing recon reports and creating {0}.{1}", fileSaveDialog.FileName, cr);
                     string results = rrController.RunRecons(fileSaveDialog.FileName);
+                    txtStatus.Text += results;
                 }
                 else
                 {

@@ -7,13 +7,22 @@ using System.Xml.Serialization;
 
 namespace ReconRunner.Model
 {
-    public class RRSerializer
+    public class RRFileService
     {
         #region Sample builder
         private Recons sampleRecons;
         private Sources sampleSources;
+        private Recons recons;
+        private Sources sources;
 
-        public RRSerializer()
+        private static RRFileService instance = new RRFileService();
+
+        public static RRFileService Instance
+        {
+            get { return instance; }
+        }
+
+        private RRFileService()
         {
             populateSampleReconObjects();
         }
@@ -354,16 +363,28 @@ namespace ReconRunner.Model
         public Recons ReadReconsFromXMLFile(string fileName)
         {
             XmlSerializer serializer = new XmlSerializer(typeof(Recons));
-            Recons recons = new Recons();
+            recons = new Recons();
             TextReader reader = new StreamReader(fileName);
-            return (Recons)serializer.Deserialize(reader);
+            recons = (Recons)serializer.Deserialize(reader);
+            return recons;
         }
         public Sources ReadSourcesFromXMLFile(string fileName)
         {
             XmlSerializer serializer = new XmlSerializer(typeof(Sources));
-            Sources sources = new Sources();
+            sources = new Sources();
             TextReader reader = new StreamReader(fileName);
-            return (Sources)serializer.Deserialize(reader);
+            sources = (Sources)serializer.Deserialize(reader);
+            return sources;
+        }
+
+        public Sources Sources
+        {
+            get { return sources; }
+        }
+
+        public Recons Recons
+        {
+            get { return recons; }
         }
 
         public Sources SampleSources
