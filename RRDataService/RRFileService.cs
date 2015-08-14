@@ -264,6 +264,7 @@ namespace ReconRunner.Model
             marketValueBase.CheckDataMatch = true;
             marketValueBase.FirstQueryColName = "market_value_base";
             marketValueBase.SecondQueryColName = "marketvaluebase";
+            marketValueBase.Tolerance = 0;
 
             QueryColumn marketValueLocal = new QueryColumn();
             marketValueLocal.Label = "Market Value Local";
@@ -271,6 +272,7 @@ namespace ReconRunner.Model
             marketValueLocal.CheckDataMatch = true;
             marketValueLocal.FirstQueryColName = "market_value_local";
             marketValueLocal.SecondQueryColName = "marketvaluelocal";
+            marketValueLocal.Tolerance = 0;
 
             edmDalPortDayPositionRecon.Columns.Add(productId);
             edmDalPortDayPositionRecon.Columns.Add(fundName);

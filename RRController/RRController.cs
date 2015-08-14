@@ -1002,6 +1002,16 @@ namespace ReconRunner.Controller
                             reconsErrors.Add(string.Format("Recons: The recon {0} has a non-query specific variable {1} with no corresponding placeholder any related SQL", recon.Name, queryVarName));
                     });
 
+                    // Any column with non-zero tolerance must be a number and CheckDataMatch is true
+                    var invalidColumns = (from col in recon.Columns
+                                          where col.Tolerance != 0 && (col.Type != ColumnType.number || !col.CheckDataMatch)
+                                          select col.Label).ToList();
+                    if (invalidColumns.Count() > 0)
+                    {
+                        var invalidColNames = string.Join(",", invalidColumns);
+                        reconsErrors.Add(string.Format("Recons: The columns {0} are invalid because only number columns with CheckDataMatch of true can have a non-zero tolerance. ", invalidColNames));
+                    }
+
                     // Any variables that are QuerySpecific but don't have QueryNumber of 1 or 2
                     var invalidQueryVariables = (from queryVariable in recon.QueryVariables
                                                  where queryVariable.QuerySpecific && queryVariable.QueryNumber != 1 && queryVariable.QueryNumber != 2

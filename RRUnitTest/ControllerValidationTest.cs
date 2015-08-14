@@ -169,6 +169,22 @@ namespace RRUnitTest
             rrController.Recons.ReconReports.Find(recon => recon.SecondQueryName != string.Empty).QueryVariables.Add(new QueryVariable { SubName = "XYZ123987", SubValue = "0", QuerySpecific = true, QueryNumber = 2 });
             Assert.IsFalse(rrController.ReadyToRun(), "Did not detect a second-query specific recon placeholder not referenced in specified query.");
         }
+
+        [TestMethod]
+        public void DetectInvalidTolerance()
+        {
+            // Tolerance should only be non-0 for number columns that have CheckDataMatch = true
+            rrController.UseSampleData();
+            var testRecon = rrController.Recons.ReconReports.Find(recon => recon.Columns.Exists(col => col.Type != ColumnType.number));
+            var testQc = testRecon.Columns.Find(col => col.Type != ColumnType.number);
+            testQc.Tolerance = 1;
+            Assert.IsFalse(rrController.ReadyToRun(), "Did not detect a non-number column having a non-zero tolerance.");
+            rrController.UseSampleData();
+            testRecon = rrController.Recons.ReconReports.Find(recon => recon.Columns.Exists(col => col.Type == ColumnType.number && !col.CheckDataMatch));
+            testQc = testRecon.Columns.Find(col => col.Type == ColumnType.number && !col.CheckDataMatch);
+            testQc.Tolerance = 1;
+            Assert.IsFalse(rrController.ReadyToRun(), "Did not detect a number column that is not being checked for data match yet has a non-zero tolerance.");
+        }
         #endregion Test Validation Logic
     }
 }

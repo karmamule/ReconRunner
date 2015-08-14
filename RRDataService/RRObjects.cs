@@ -245,6 +245,7 @@ namespace ReconRunner.Model
         bool checkDataMatch;
         bool alwaysDisplay;
         bool identifyingColumn;
+        decimal tolerance;
 
         public QueryColumn()
         {
@@ -252,6 +253,7 @@ namespace ReconRunner.Model
             checkDataMatch = false;
             alwaysDisplay = false;
             identifyingColumn = false;
+            tolerance = 0;
         }
 
         /// <summary>
@@ -333,6 +335,19 @@ namespace ReconRunner.Model
         {
             get { return identifyingColumn; }
             set { identifyingColumn = value; }
+        }
+
+        /// <summary>
+        /// Only valid for number type columns with CheckDataMatch of true.  In those cases
+        /// this indicates how much difference there can be between the values in the two
+        /// queries before the difference is reported.  If the default value of 0 then 
+        /// all differences will be reported no matter how trivial
+        /// </summary>
+        [XmlAttribute("Tolerance")]
+        public decimal Tolerance
+        {
+            get { return tolerance; }
+            set { tolerance = value; }
         }
     }
     #endregion QueryColumn
