@@ -16,7 +16,6 @@ namespace ReconRunner.Controller
         static readonly RRController instance = new RRController();
 
         private RRDataService rrDataService = RRDataService.Instance;
-        private RRFileService rrFileService = RRFileService.Instance;
         private RRExcelService rrExcelService = RRExcelService.Instance;
         string pipePlaceholderRegex = @"\|(\w+)\|";
 
@@ -76,7 +75,7 @@ namespace ReconRunner.Controller
         /// <param name="fileName"></param>
         public void CreateSampleXMLReconReportFile(string fileName)
         {
-            rrFileService.WriteSampleReconsToXMLFile(fileName);
+            new RRFileService().WriteSampleReconsToXMLFile(fileName);
         }
 
         /// <summary>
@@ -87,7 +86,7 @@ namespace ReconRunner.Controller
         /// <param name="fileName"></param>
         public void CreateSampleXMLSourcesFile(string fileName)
         {
-            rrFileService.WriteSampleSourcesToXMLFile(fileName);
+            new RRFileService().WriteSampleSourcesToXMLFile(fileName);
         }
         
         /// <summary>
@@ -96,7 +95,7 @@ namespace ReconRunner.Controller
         /// <param name="fileName"></param>
         public void WriteReconsToXMLFile(string fileName)
         {
-            rrFileService.WriteReconsToXMLFile(recons, fileName);
+            new RRFileService().WriteReconsToXMLFile(recons, fileName);
         }
 
         /// <summary>
@@ -105,7 +104,7 @@ namespace ReconRunner.Controller
         /// <param name="fileName"></param>
         public void WriteSourcesToXMLFile(string fileName)
         {
-            rrFileService.WriteSourcesToXMLFile(sources, fileName);
+            new RRFileService().WriteSourcesToXMLFile(sources, fileName);
         }
         
         /// <summary>
@@ -118,7 +117,7 @@ namespace ReconRunner.Controller
         {
             try
             {
-                recons = rrFileService.ReadReconsFromXMLFile(fileName);
+                recons = new RRFileService().ReadReconsFromXMLFile(fileName);
                 return "Done.";
             }
             catch (Exception e)
@@ -143,7 +142,7 @@ namespace ReconRunner.Controller
         {
             try
             {
-                sources = rrFileService.ReadSourcesFromXMLFile(fileName);
+                sources = new RRFileService().ReadSourcesFromXMLFile(fileName);
                 return "Done.";
             }
             catch (Exception e)
@@ -166,7 +165,8 @@ namespace ReconRunner.Controller
         {
             if (sources.Queries.Count == 0 || recons.ReconReports.Count == 0)
                 throw new Exception("Either sources or recons not specified");
-            rrDataService.RefreshSourcesAndRecons();
+            rrDataService.Sources = sources;
+            rrDataService.Recons = recons;
             string results = "";
             List<DataTable> reconData = new List<DataTable>();
 
@@ -190,10 +190,8 @@ namespace ReconRunner.Controller
                         // getQueriesData(recon, ref firstQueryData, ref secondQueryData);
                         reconData = rrDataService.GetReconData(recon);
                         firstQueryData = reconData[0];
-                        var test = recon.SecondQueryName;
                         if (recon.SecondQueryName != "")
                             secondQueryData = reconData[1];
-
                         createReconTab(recon, firstQueryData, secondQueryData);
                 }
             }
@@ -318,9 +316,9 @@ namespace ReconRunner.Controller
             // Start the section with a label
             excelRow = new Dictionary<string, Cell>();
             excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
-            excelRow.Add("B", new Cell(recon.FirstQueryName, CellStyle.Bold));
+            excelRow.Add("B", new Cell(recon.FirstQueryLabel, CellStyle.Bold));
             excelRow.Add("C", new Cell("Without a Match in", CellStyle.Bold));
-            excelRow.Add("D", new Cell(recon.SecondQueryName, CellStyle.Bold));
+            excelRow.Add("D", new Cell(recon.SecondQueryLabel, CellStyle.Bold));
             rrExcelService.AddRow(excelRow);
             // Now write out the common columns at the left of each section
             writeCommonHeaders(2, recon.Columns, true, true);
@@ -364,9 +362,9 @@ namespace ReconRunner.Controller
             // Start the section with a label
             excelRow = new Dictionary<string, Cell>();
             excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
-            excelRow.Add("B", new Cell(recon.SecondQueryName, CellStyle.Bold));
+            excelRow.Add("B", new Cell(recon.SecondQueryLabel, CellStyle.Bold));
             excelRow.Add("C", new Cell("Without a Match in", CellStyle.Bold));
-            excelRow.Add("D", new Cell(recon.FirstQueryName, CellStyle.Bold));
+            excelRow.Add("D", new Cell(recon.FirstQueryLabel, CellStyle.Bold));
             rrExcelService.AddRow(excelRow);
             // Now write out the common columns at the left of each section
 
@@ -434,10 +432,10 @@ namespace ReconRunner.Controller
             {
                 excelRow = new Dictionary<string, Cell>();
                 excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
-                excelRow.Add("B", new Cell(recon.FirstQueryName, CellStyle.Bold));
+                excelRow.Add("B", new Cell(recon.FirstQueryLabel, CellStyle.Bold));
                 excelRow.Add("C", new Cell("that have one or more", CellStyle.Bold));
                 excelRow.Add("D", new Cell("differences compared to", CellStyle.Bold));
-                excelRow.Add("E", new Cell(recon.SecondQueryName, CellStyle.Bold));
+                excelRow.Add("E", new Cell(recon.SecondQueryLabel, CellStyle.Bold));
                 rrExcelService.AddRow(excelRow);
             }
             // Now write out the common columns at the left of each section
@@ -787,6 +785,9 @@ namespace ReconRunner.Controller
         /// <param name="recon">The recon report we're processing</param>
         private void writeWorkSheetHeaderRows(ReconReport recon)
         {
+            var firstQueryName = recon.FirstQueryName == recon.SecondQueryName ? recon.FirstQueryName + " (1)" : recon.FirstQueryName;
+            var secondQueryName = recon.SecondQueryName == recon.SecondQueryName ? recon.SecondQueryName + " (2)" : recon.SecondQueryName;
+
             // Main title
             excelRow = new Dictionary<string, Cell>();
             excelRow.Add("A", new Cell(recon.Name, CellStyle.Bold));
@@ -796,14 +797,14 @@ namespace ReconRunner.Controller
             if (recon.SecondQueryName != "")
             {
                 excelRow.Add("A", new Cell("Comparing"));
-                excelRow.Add("B", new Cell(recon.FirstQueryName));
+                excelRow.Add("B", new Cell(firstQueryName));
                 excelRow.Add("C", new Cell("to"));
-                excelRow.Add("D", new Cell(recon.SecondQueryName));
+                excelRow.Add("D", new Cell(secondQueryName));
             }
             else
             {
                 excelRow.Add("A", new Cell("Rows returned by"));
-                excelRow.Add("B", new Cell(recon.FirstQueryName));
+                excelRow.Add("B", new Cell(firstQueryName));
             }
             rrExcelService.AddRow(excelRow);
             // Write row with query variable values
@@ -814,8 +815,9 @@ namespace ReconRunner.Controller
             {
                 recon.QueryVariables.ForEach(queryVar =>
                     {
+                        var queryVarName = queryVar.QuerySpecific ? string.Format("{0} ({1})", queryVar.SubName, queryVar.QueryNumber) : queryVar.SubName;
                         var currColumn = columnLetters[currColumnIndex].ToString();
-                        excelRow.Add(currColumn, new Cell(string.Format("{0}: {1}", queryVar.SubName, queryVar.SubValue)));
+                        excelRow.Add(currColumn, new Cell(string.Format("{0}: {1}", queryVarName, queryVar.SubValue)));
                         ++currColumnIndex;
                     });
             }
@@ -825,12 +827,12 @@ namespace ReconRunner.Controller
 
             // Sub-title row with key to column header names
             // Only add if two-query recon
-            if (recon.SecondQueryName != "")
+            if (secondQueryName != "")
             {
                 excelRow.Clear();
                 excelRow.Add("A", new Cell("(Id) = Part of Unique ID", CellStyle.Italic));
-                excelRow.Add("B", new Cell("(1) = Found in 1st Query only", CellStyle.Italic));
-                excelRow.Add("C", new Cell("(2) = Found in 2nd Query only", CellStyle.Italic));
+                excelRow.Add("B", new Cell("(1) = 1st Query", CellStyle.Italic));
+                excelRow.Add("C", new Cell("(2) = 2nd Query", CellStyle.Italic));
                 excelRow.Add("D", new Cell("(M) = Matched Column", CellStyle.Italic));
                 rrExcelService.AddRow(excelRow);
             }
@@ -1078,8 +1080,11 @@ namespace ReconRunner.Controller
         /// </summary>
         public void UseSampleData()
         {
+            var rrFileService = new RRFileService();
             sources = rrFileService.SampleSources;
             recons = rrFileService.SampleRecons;
+            rrDataService.Sources = sources;
+            rrDataService.Recons = recons;
         }
         #endregion Utilities
     }

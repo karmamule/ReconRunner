@@ -415,6 +415,36 @@ namespace ReconRunner.Model
             set { secondQueryName = value; }
         }
 
+        /// <summary>
+        /// Appends (1) to first query name if same query
+        /// used twice for recon
+        /// </summary>
+        public string FirstQueryLabel
+        {
+            get
+            {
+                if (firstQueryName == secondQueryName)
+                    return firstQueryName + " (1)";
+                else
+                    return firstQueryName;
+            }
+        }
+
+        /// <summary>
+        /// Appends (2) to second query name if same query
+        /// used twice for recon
+        /// </summary>
+        public string SecondQueryLabel
+        {
+            get
+            {
+                if (firstQueryName == secondQueryName)
+                    return secondQueryName + " (2)";
+                else
+                    return secondQueryName;
+            }
+        }
+
 
     }
 

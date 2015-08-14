@@ -69,7 +69,7 @@ namespace RRWpfUi
             {
                 var fileSaveDialog = getFileSaveDialog("Save recon results to spreadsheet");
                 fileSaveDialog.DefaultExt = "xls";
-                fileSaveDialog.Filter = "XLS Files|*.xls|All files|*.*";
+                fileSaveDialog.Filter = "Excel Files|*.xlsx|All files|*.*";
                 DialogResult excelFile = fileSaveDialog.ShowDialog();
 
                 if (excelFile != System.Windows.Forms.DialogResult.Cancel)

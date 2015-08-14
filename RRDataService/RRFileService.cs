@@ -15,14 +15,7 @@ namespace ReconRunner.Model
         private Recons recons;
         private Sources sources;
 
-        private static RRFileService instance = new RRFileService();
-
-        public static RRFileService Instance
-        {
-            get { return instance; }
-        }
-
-        private RRFileService()
+        public RRFileService()
         {
             populateSampleReconObjects();
         }
@@ -396,5 +389,6 @@ namespace ReconRunner.Model
         {
             get { return sampleRecons; }
         }
+
     }
 }

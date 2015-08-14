@@ -15,8 +15,6 @@ namespace ReconRunner.Model
         #region Constructors
         private static RRDataService instance = new RRDataService();
         public static RRDataService Instance { get { return instance; } }
-
-        private RRFileService rrFileService = RRFileService.Instance;
         
 
         // A set of open connections available for use
@@ -119,16 +117,6 @@ namespace ReconRunner.Model
                 CloseConnections();
                 throw new Exception(string.Format("Error {0} while running query {0} SQL {1}", getFullErrorMessage(ex), query.Name, querySql));
             }
-        }
-
-        /// <summary>
-        /// Tell the dataservice to get the recons and sources in use from the 
-        /// fileservice.
-        /// </summary>
-        public void RefreshSourcesAndRecons()
-        {
-            sources = rrFileService.Sources;
-            recons = rrFileService.Recons;
         }
 
         /// <summary>
