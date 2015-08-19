@@ -14,7 +14,6 @@ namespace ReconRunner.Model
         private Sources sampleSources;
         private Recons recons;
         private Sources sources;
-        public event ActionStatusEventHandler ActionStatusEvent;
 
         public RRFileService()
         {
@@ -504,16 +503,6 @@ namespace ReconRunner.Model
             return sources;
         }
 
-        public Sources Sources
-        {
-            get { return sources; }
-        }
-
-        public Recons Recons
-        {
-            get { return recons; }
-        }
-
         public Sources SampleSources
         {
             get { return sampleSources; }
@@ -523,23 +512,6 @@ namespace ReconRunner.Model
         {
             get { return sampleRecons; }
         }
-
-        #region Utilities
-        /// <summary>
-        /// Use to send non-critical messages.  
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="state"></param>
-        /// <param name="message"></param>
-        /// <param name="isDetail">Set to false to be seen always, if true may only be seen if user has
-        /// requested to see details or in detail logging.</param>
-        private void sendActionStatus(object sender, RequestState state, string message, bool isDetail)
-        {
-            if (ActionStatusEvent != null)
-                ActionStatusEvent(sender, new ActionStatusEventArgs(state, message, isDetail));
-        }
-
-        #endregion Utilities
 
     }
 }

@@ -201,7 +201,7 @@ namespace ReconRunner.ExcelService
         /// <param name="filename">The filename to use when saving.</param>
         /// <param name="location">The directory location where the file should be saved.</param>
         /// <returns></returns>
-        public string SaveSpreadsheet(string filename)
+        public void SaveSpreadsheet(string filename)
         {
             //Save the template to the location and filename provided.
             try
@@ -213,9 +213,9 @@ namespace ReconRunner.ExcelService
             catch (Exception e)
             {
                 CloseExcel();
-                return "Error saving Excel: " + e.Message + "\r\n";
+                throw new ApplicationException(string.Format("Error saving Excel file: {0}." + GetFullErrorMessage(e)));
             }
-            return "Save successful.";
+            sendActionStatus(this, RequestState.Succeeded, "Excel save completed.", false);
         }
 
         /// <summary>
@@ -227,7 +227,7 @@ namespace ReconRunner.ExcelService
             ecWS.Cells.EntireColumn.AutoFit();
         }
 
-        public string CloseExcel()
+        public void CloseExcel()
         {
             //Close all Excel objects.
             try
@@ -238,10 +238,8 @@ namespace ReconRunner.ExcelService
             }
             catch (Exception e)
             {
-                return "Error quitting Excel: " + e.Message + "\r\n";
+                throw new ApplicationException(string.Format("Error closing Excel: {0}.", GetFullErrorMessage(e)));
             }
-
-            return "Quit from Excel.\r\n";
         }
 
         /// <summary>
@@ -294,6 +292,21 @@ namespace ReconRunner.ExcelService
         {
             if (ActionStatusEvent != null)
                 ActionStatusEvent(sender, new ActionStatusEventArgs(state, message, isDetail));
+        }
+
+        /// <summary>
+        /// If inner exception exists will append that message to top level exception message,
+        /// else just returns top level exception message. Calls itself recursively in case
+        /// there are >2 layers of exceptions.
+        /// </summary>
+        /// <param name="ex"></param>
+        /// <returns></returns>
+        public string GetFullErrorMessage(Exception ex)
+        {
+            if (ex.InnerException != null)
+                return (string.Format("{0}: {1}", ex.Message, GetFullErrorMessage(ex.InnerException)));
+            else
+                return ex.Message;
         }
 
         #endregion Utilities

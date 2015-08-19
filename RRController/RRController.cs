@@ -56,8 +56,8 @@ namespace ReconRunner.Controller
 
         private RRController()
         {
-            rrDataService.ActionStatusEvent += new ActionStatusEventHandler(relayActionStatusEvent);
-            rrExcelService.ActionStatusEvent += new ActionStatusEventHandler(relayActionStatusEvent);
+            //rrDataService.ActionStatusEvent += new ActionStatusEventHandler(relayActionStatusEvent);
+            //rrExcelService.ActionStatusEvent += new ActionStatusEventHandler(relayActionStatusEvent);
         }
 
         public static RRController Instance
@@ -79,6 +79,7 @@ namespace ReconRunner.Controller
         public void CreateSampleXMLReconReportFile(string fileName)
         {
             getNewFileService().WriteSampleReconsToXMLFile(fileName);
+            sendActionStatus(this, RequestState.Succeeded, "Created sample recons XML file.", false);
         }
 
         /// <summary>
@@ -90,24 +91,7 @@ namespace ReconRunner.Controller
         public void CreateSampleXMLSourcesFile(string fileName)
         {
             getNewFileService().WriteSampleSourcesToXMLFile(fileName);
-        }
-        
-        /// <summary>
-        /// Write all the recons currently in the recons object out to an XML file.  Not too useful?
-        /// </summary>
-        /// <param name="fileName"></param>
-        public void WriteReconsToXMLFile(string fileName)
-        {
-            getNewFileService().WriteReconsToXMLFile(recons, fileName);
-        }
-
-        /// <summary>
-        /// Write all the recons currently in the recons object out to an XML file.  Not too useful?
-        /// </summary>
-        /// <param name="fileName"></param>
-        public void WriteSourcesToXMLFile(string fileName)
-        {
-            getNewFileService().WriteSourcesToXMLFile(sources, fileName);
+            sendActionStatus(this, RequestState.Succeeded, "Created sample sources XML file.", false);
         }
         
         /// <summary>
@@ -116,18 +100,17 @@ namespace ReconRunner.Controller
         /// SQL statement and connection string to be used for each query.
         /// </summary>
         /// <param name="fileName"></param>
-        public string ReadReconsFromXMLFile(string fileName)
+        public void ReadReconsFromXMLFile(string fileName)
         {
             try
             {
                 recons = getNewFileService().ReadReconsFromXMLFile(fileName);
-                return "Done.";
+                sendActionStatus(this, RequestState.Succeeded, "Read recons from XML file.", false);
             }
             catch (Exception e)
             {
-                recons = null;                
-                return "Failed to load: " + e.Message;
-
+                recons = null;
+                sendActionStatus(this, RequestState.Error, string.Format("Failed to read recons from XML file: {0}.", GetFullErrorMessage(e)), false);            
             }
         }
 
@@ -141,17 +124,17 @@ namespace ReconRunner.Controller
         /// needed for the recons to be run.
         /// </summary>
         /// <param name="fileName"></param>
-        public string ReadSourcesFromXMLFile(string fileName)
+        public void ReadSourcesFromXMLFile(string fileName)
         {
             try
             {
                 sources = getNewFileService().ReadSourcesFromXMLFile(fileName);
-                return "Done.";
+                sendActionStatus(this, RequestState.Succeeded, "Read sources from XML file.", false);
             }
             catch (Exception e)
             {
-                sources = null;                
-                return "Failed to load: " + e.Message;
+                sources = null;
+                sendActionStatus(this, RequestState.Error, string.Format("Failed to read sources from XML file: {0}.", GetFullErrorMessage(e)), false);
             }
         }
 
@@ -164,13 +147,12 @@ namespace ReconRunner.Controller
         /// on the spreadsheet.
         /// </summary>
         /// <returns>A string with information on the run (success/failure/reports run/etc.)</returns>
-        public string RunRecons(string excelFileName)
+        public void RunRecons(string excelFileName)
         {
             if (sources.Queries.Count == 0 || recons.ReconReports.Count == 0)
                 throw new Exception("Either sources or recons not specified");
             rrDataService.Sources = sources;
             rrDataService.Recons = recons;
-            string results = "";
             List<DataTable> reconData = new List<DataTable>();
 
             try
@@ -185,35 +167,33 @@ namespace ReconRunner.Controller
 
             try
             {
-                for (int i = 0; i < recons.ReconReports.Count; i++)
+                recons.ReconReports.ForEach(recon =>
                 {
-                    ReconReport recon = recons.ReconReports[i];
-                    results += "Running " + recon.Name + "\r\n";
-                        // Get the data from the two queries that will be compared
-                        // getQueriesData(recon, ref firstQueryData, ref secondQueryData);
-                        reconData = rrDataService.GetReconData(recon);
-                        firstQueryData = reconData[0];
-                        if (recon.SecondQueryName != "")
-                            secondQueryData = reconData[1];
-                        createReconTab(recon, firstQueryData, secondQueryData);
-                }
+                    sendActionStatus(this, RequestState.Information, string.Format("Running recon {0}.", recon.Name), false); 
+                    // Get the data from the two queries that will be compared
+                    // getQueriesData(recon, ref firstQueryData, ref secondQueryData);
+                    reconData = rrDataService.GetReconData(recon);
+                    firstQueryData = reconData[0];
+                    if (recon.SecondQueryName != "")
+                        secondQueryData = reconData[1];
+                    sendActionStatus(this, RequestState.Information, string.Format("Creating Excel tab {0}.", recon.TabLabel), false);
+                    createReconTab(recon, firstQueryData, secondQueryData);
+                    sendActionStatus(this, RequestState.Succeeded, string.Format("Finished recon {0}.", recon.Name), false);
+                });
             }
             catch(Exception e)
             {
-                results += "Failed to run: " + GetFullErrorMessage(e);
                 rrDataService.CloseConnections();
                 rrExcelService.CloseExcel();
-                throw new ApplicationException(results);
+                throw new ApplicationException(string.Format("Error while running recon: {0}. Closed connections and Excel.", GetFullErrorMessage(e)));
             }
             rrDataService.CloseConnections();
+            sendActionStatus(this, RequestState.Information, "Closed all connections.", false);
 
             // Save the spreadsheet and close the Excel process.
             rrExcelService.SaveSpreadsheet(excelFileName);
             rrExcelService.CloseExcel();
-
-            results += "Finished running recon reports.\r\n\r\n";
-
-            return results;
+            sendActionStatus(this, RequestState.Succeeded, "Saved spreadsheet, closed Excel, Done.", false);
         }
 
         /// <summary>
@@ -1133,7 +1113,6 @@ namespace ReconRunner.Controller
         private RRFileService getNewFileService()
         {
             RRFileService rrFileService = new RRFileService();
-            rrFileService.ActionStatusEvent += new ActionStatusEventHandler(relayActionStatusEvent);
             return rrFileService;
         }
 
