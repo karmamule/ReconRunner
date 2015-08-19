@@ -32,7 +32,7 @@ namespace ReconRunner.Model
             // Sample Connection String Templates
             var sqlServerTemplate = new ConnectionStringTemplate();
             sqlServerTemplate.Name = "SQL Server";
-            sqlServerTemplate.Template = "Server=|ServerName|;Database=|DatabaseName|;Trusted_Connection=True";
+            sqlServerTemplate.Template = "Provider=SQLNCLI11;Server=|ServerName|;Database=|DatabaseName|;Trusted_Connection=yes";
             var teradataTemplate = new ConnectionStringTemplate();
             teradataTemplate.Name = "Teradata";
             teradataTemplate.Template = "Data Source=|ServerName|;User ID=|User|;Password=|Password|;Session Mode=TERADATA;";
@@ -110,7 +110,8 @@ namespace ReconRunner.Model
 	                                                            bigs.atins_id,
 	                                                            ai.atins_name,
 	                                                            ai.effect_date,
-	                                                            ai.end_valid_date
+	                                                            ai.end_valid_date,
+                                                                ai.atins_release_number
                                                             from warehouse.bisamattributions_gics_sec bigs
                                                             join warehouse.portfolio p
                                                             on  bigs.atptf_id = |PortId| 
@@ -163,8 +164,8 @@ namespace ReconRunner.Model
             portfolioId.Type = ColumnType.number;
             portfolioId.IdentifyingColumn = true;
             portfolioId.AlwaysDisplay = true;
-            portfolioId.FirstQueryColName = "atpf_id";
-            portfolioId.SecondQueryColName = "atpf_id";
+            portfolioId.FirstQueryColName = "atptf_id";
+            portfolioId.SecondQueryColName = "atptf_id";
 
             QueryColumn portfolioName = new QueryColumn();
             portfolioName.Label = "Portfolio Name";
@@ -198,11 +199,21 @@ namespace ReconRunner.Model
             instrumentName.FirstQueryColName = "atins_name";
             instrumentName.SecondQueryColName = "atins_name";
 
+            QueryColumn instrumentReleaseNum = new QueryColumn();
+            instrumentReleaseNum.Label = "Release #";
+            instrumentReleaseNum.Type = ColumnType.text;
+            instrumentReleaseNum.IdentifyingColumn = false;
+            instrumentReleaseNum.AlwaysDisplay = false;
+            instrumentReleaseNum.CheckDataMatch = true;
+            instrumentReleaseNum.FirstQueryColName = "atins_release_number";
+            instrumentReleaseNum.SecondQueryColName = "atins_release_number";
+
             warehousePortGicsRecon.Columns.Add(portfolioId);
             warehousePortGicsRecon.Columns.Add(portfolioName);
             warehousePortGicsRecon.Columns.Add(calcDate);
             warehousePortGicsRecon.Columns.Add(instrumentId);
             warehousePortGicsRecon.Columns.Add(instrumentName);
+            warehousePortGicsRecon.Columns.Add(instrumentReleaseNum);
 
             warehousePortGicsRecon.QueryVariables = new List<QueryVariable>
             {

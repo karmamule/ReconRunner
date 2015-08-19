@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RRUI", "ReconRunner\RRUI.csproj", "{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RRController", "RRController\RRController.csproj", "{7BCC759A-B30E-44E2-908B-ADC1805D23FF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RRExcelService", "ExcelService\RRExcelService.csproj", "{7872C108-6CA7-47B4-A95E-F6E4A42C2883}"
@@ -27,22 +25,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Debug|ARM.ActiveCfg = Debug|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Debug|ARM.Build.0 = Debug|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Debug|x64.Build.0 = Debug|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Debug|x86.Build.0 = Debug|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Release|ARM.ActiveCfg = Release|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Release|ARM.Build.0 = Release|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Release|x64.ActiveCfg = Release|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Release|x64.Build.0 = Release|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Release|x86.ActiveCfg = Release|Any CPU
-		{A88585AB-70BC-43FA-BEE2-526DDEBF4EBC}.Release|x86.Build.0 = Release|Any CPU
 		{7BCC759A-B30E-44E2-908B-ADC1805D23FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7BCC759A-B30E-44E2-908B-ADC1805D23FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7BCC759A-B30E-44E2-908B-ADC1805D23FF}.Debug|ARM.ActiveCfg = Debug|Any CPU
