@@ -81,10 +81,10 @@ namespace ReconRunner.Model
 
             // Sample Queries
             var doc = new XmlDocument();
-            var warehouseQuery = new RRQuery();
-            warehouseQuery.Name = "PortGicsSectorDetails";
-            warehouseQuery.ConnStringName = "DataWarehouse Dev";
-            warehouseQuery.SQL = doc.CreateCDataSection(@"with latestAttrInsEffDate as 
+            var portGicsSectorDetail = new RRQuery();
+            portGicsSectorDetail.Name = "PortGicsSectorDetails";
+            portGicsSectorDetail.ConnStringName = "DataWarehouse Dev";
+            portGicsSectorDetail.SQL = doc.CreateCDataSection(@"with latestAttrInsEffDate as 
                                                             (
 	                                                            select
 		                                                            atins_id,
@@ -128,6 +128,44 @@ namespace ReconRunner.Model
                                                             and lai.LatestRowDate = ai.effect_date
                                                             and lai.LatestReleaseNumber = ai.ATINS_RELEASE_NUMBER
                                                             order by atins_name");
+            var portAttribGroupcheck = new RRQuery();
+            portAttribGroupcheck.Name = "PortAttribGroupCheck";
+            portAttribGroupcheck.ConnStringName = "DataWarehouse Dev";
+            portAttribGroupcheck.SQL = doc.CreateCDataSection(@"with portAttributionsRuns as (
+	                                                        select
+		                                                        max(checksum(atptf_id, atins_id, atins_release_number, calcul_date, frequency_id, begin_date, portf_config_id)) portAttribRunKey,
+		                                                        atptf_id,
+		                                                        atins_id,
+		                                                        atins_release_number,
+		                                                        calcul_date, 
+		                                                        frequency_id, 
+		                                                        begin_date,
+		                                                        portf_config_id,
+		                                                        user_defined_group_id
+	                                                        from warehouse.bisamAttributions_|SegmentTableName| bigs
+	                                                        where atptf_id = |PortId| and atins_id <> 0 and dateinactive = '31-dec-9999'
+	                                                        group by atptf_id, atins_id, atins_release_number, calcul_date, frequency_id, begin_date, portf_config_id, user_defined_group_id),
+                                                        portMultiGroupCount as (
+	                                                        select
+		                                                        portAttribRunkey,
+		                                                        atptf_id,
+		                                                        atins_id,
+		                                                        atins_release_number,
+		                                                        calcul_date,
+		                                                        frequency_id,
+		                                                        begin_date,
+		                                                        portf_config_id
+	                                                        from portAttributionsRuns
+	                                                        group by portAttribRunKey, atptf_id, atins_id, atins_release_number, calcul_date, frequency_id, begin_date, portf_config_id
+	                                                        having count(*) > 1
+                                                        )
+                                                        select par.*, p.portf_name
+                                                        from portAttributionsRuns par
+                                                        join portMultiGroupCount pmgc
+                                                        on par.portAttribRunKey = pmgc.portAttribRunKey
+                                                        join warehouse.portfolio p
+                                                        on par.atptf_id = p.portf_id
+                                                        order by par.atins_id, par.atins_release_number, par.calcul_date, par.FREQUENCY_ID, par.begin_date, user_defined_group_id");
             var edmQuery = new RRQuery();
             edmQuery.Name = "EdmProductDayPositions";
             edmQuery.ConnStringName = "EDM UAT";
@@ -140,7 +178,8 @@ namespace ReconRunner.Model
             posFkQuery.Name = "DalPositionsMissingFk";
             posFkQuery.ConnStringName = "Teradata UAT";
             posFkQuery.SQL = doc.CreateCDataSection("select * from (select dimtimeid,  case when dimsecurityid = 'UNKNOWN' and dimproductid = 'UNKNOWN' then 'BOTH' when dimsecurityid = 'UNKNOWN' then 'SECURITY' else 'PRODUCT' end MissingEntity, case when dimsecurityid = 'UNKNOWN' and dimproductid = 'UNKNOWN' then 'Security ID: ' || OrigSecurityId || '; Product ID: ' || OrigProductId when dimsecurityid = 'UNKNOWN' then OrigSecurityId else OrigProductId end MissingEntityId from factposition where (dimsecurityid = 'UNKNOWN' or dimproductid = 'UNKNOWN') and dimtimeid >= 1131101) data group by MissingEntity, MissingEntityId, DimTimeId order by MissingEntity, MissingEntityId, DimTimeId");
-            sampleSources.Queries.Add(warehouseQuery);
+            sampleSources.Queries.Add(portGicsSectorDetail);
+            sampleSources.Queries.Add(portAttribGroupcheck);
             sampleSources.Queries.Add(edmQuery);
             sampleSources.Queries.Add(teraQuery);
             sampleSources.Queries.Add(posFkQuery);
@@ -223,7 +262,85 @@ namespace ReconRunner.Model
                 new QueryVariable { SubName = "DateWanted", SubValue = "30-jul-2015", QuerySpecific=true, QueryNumber=1 },
                 new QueryVariable { SubName = "DateWanted", SubValue = "31-jul-2015",QuerySpecific=true, QueryNumber=2 }
             };
+
+            ReconReport instMultGroupsRecon = new ReconReport();
+            instMultGroupsRecon.Name = "Instruments with Multiple Attribution Groups for Similar Runs";
+            instMultGroupsRecon.TabLabel = "Multi-group Inst";
+            instMultGroupsRecon.FirstQueryName = "PortAttribGroupCheck";
+            instMultGroupsRecon.SecondQueryName = string.Empty;
+
+            portfolioId = new QueryColumn();
+            portfolioId.Label = "Portfolio ID";
+            portfolioId.Type = ColumnType.number;
+            portfolioId.AlwaysDisplay = true;
+            portfolioId.FirstQueryColName = "atptf_id";
+
+            portfolioName = new QueryColumn();
+            portfolioName.Label = "Portfolio Name";
+            portfolioName.Type = ColumnType.text;
+            portfolioName.AlwaysDisplay = true;
+            portfolioName.FirstQueryColName = "portf_name";
+
+            instrumentId = new QueryColumn();
+            instrumentId.Label = "Instrument Id";
+            instrumentId.Type = ColumnType.number;
+            instrumentId.AlwaysDisplay = true;
+            instrumentId.FirstQueryColName = "atins_id";
+
+            instrumentReleaseNum = new QueryColumn();
+            instrumentReleaseNum.Label = "Release #";
+            instrumentReleaseNum.Type = ColumnType.number;
+            instrumentReleaseNum.AlwaysDisplay = true;
+            instrumentReleaseNum.FirstQueryColName = "atins_release_number";
+
+            calcDate = new QueryColumn();
+            calcDate.Label = "Calcul Date";
+            calcDate.Type = ColumnType.date;
+            calcDate.AlwaysDisplay = true;
+            calcDate.FirstQueryColName = "calcul_date";
+
+            var frequencyId = new QueryColumn();
+            frequencyId.Label = "Freq";
+            frequencyId.Type = ColumnType.number;
+            frequencyId.AlwaysDisplay = true;
+            frequencyId.FirstQueryColName = "frequency_id";
+
+            var beginDate = new QueryColumn();
+            beginDate.Label = "Begin Date";
+            beginDate.Type = ColumnType.date;
+            beginDate.AlwaysDisplay = true;
+            beginDate.FirstQueryColName = "begin_date";
+
+            var portfConfigId = new QueryColumn();
+            portfConfigId.Label = "Config Id";
+            portfConfigId.Type = ColumnType.number;
+            portfConfigId.AlwaysDisplay = true;
+            portfConfigId.FirstQueryColName = "portf_config_id";
+
+            var udGroupId = new QueryColumn();
+            udGroupId.Label = "Group Id";
+            udGroupId.Type = ColumnType.number;
+            udGroupId.AlwaysDisplay = true;
+            udGroupId.FirstQueryColName = "user_defined_group_id";
+
+            instMultGroupsRecon.Columns.Add(portfolioId);
+            instMultGroupsRecon.Columns.Add(portfolioName);
+            instMultGroupsRecon.Columns.Add(instrumentId);
+            instMultGroupsRecon.Columns.Add(instrumentReleaseNum);
+            instMultGroupsRecon.Columns.Add(calcDate);
+            instMultGroupsRecon.Columns.Add(frequencyId);
+            instMultGroupsRecon.Columns.Add(beginDate);
+            instMultGroupsRecon.Columns.Add(portfConfigId);
+            instMultGroupsRecon.Columns.Add(udGroupId);
+
+            instMultGroupsRecon.QueryVariables = new List<QueryVariable>
+            {
+                new QueryVariable { SubName = "PortId", SubValue = "1003022" },
+                new QueryVariable { SubName = "SegmentTableName", SubValue = "GICS_Sec" }
+            };
+
             sampleRecons.ReconReports.Add(warehousePortGicsRecon);
+            sampleRecons.ReconReports.Add(instMultGroupsRecon);
 
             /*
             // Note that queries running on two separate platforms may still be compared

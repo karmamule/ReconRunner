@@ -60,7 +60,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ExcelService\RRExcelService.csproj">
-      <Project>{7872C108-6CA7-47B4-A95E-F6E4A42C2883}</Project>
+      <Project>{7872c108-6ca7-47b4-a95e-f6e4a42c2883}</Project>
       <Name>RRExcelService</Name>
     </ProjectReference>
     <ProjectReference Include="..\RRDataService\RRModel.csproj">

@@ -461,12 +461,11 @@ namespace ReconRunner.Controller
                 if (firstQueryData.Rows.Count == 0)
                 {
                     excelRow = new Dictionary<string, Cell>();
-                    excelRow.Add("A", new Cell("No problems found", CellStyle.Bold));
+                    excelRow.Add("A", new Cell("No rows returned", CellStyle.Bold));
                     rrExcelService.AddRow(excelRow);
                 }
                 else
                 {
-                    // Write a summary row with number of problems found
                     foreach (DataRow row in firstQueryData.Rows)
                     {
                         excelRow = new Dictionary<string, Cell>();
@@ -478,7 +477,8 @@ namespace ReconRunner.Controller
                         }
                         rrExcelService.AddRow(excelRow);
                     }
-                    counterText = string.Format("{0} {1} found.", firstQueryData.Rows.Count, firstQueryData.Rows.Count == 1 ? "problem" : "problems");
+                    // Write a summary row with number of rows returned
+                    counterText = string.Format("{0} {1} returned.", firstQueryData.Rows.Count, firstQueryData.Rows.Count == 1 ? "row" : "rows");
                     excelRow.Clear();
                     excelRow.Add("A", new Cell(counterText));
                     rrExcelService.AddRow(excelRow);                }
@@ -789,7 +789,7 @@ namespace ReconRunner.Controller
         private void writeWorkSheetHeaderRows(ReconReport recon)
         {
             var firstQueryName = recon.FirstQueryName == recon.SecondQueryName ? recon.FirstQueryName + " (1)" : recon.FirstQueryName;
-            var secondQueryName = recon.SecondQueryName == recon.SecondQueryName ? recon.SecondQueryName + " (2)" : recon.SecondQueryName;
+            var secondQueryName = recon.FirstQueryName == recon.SecondQueryName ? recon.SecondQueryName + " (2)" : recon.SecondQueryName;
 
             // Main title
             excelRow = new Dictionary<string, Cell>();

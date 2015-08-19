@@ -257,7 +257,7 @@ namespace ReconRunner.ExcelService
         {
             if (ecApp == null)
             {
-                ecApp = new Excel.ApplicationClass();
+                ecApp = new Excel.Application();
                 //ecApp.ScreenUpdating = false;
                 ecWB = ecApp.Workbooks.Add(missing);
                 ecWS = (Excel.Worksheet)ecWB.ActiveSheet;

@@ -36,8 +36,9 @@
                                 ConverterParameter=0.95}" 
                        ToolTip="Information on file validation and/or recon run status will appear here." Background="White" />
         </ScrollViewer>
-        <Button x:Name="btnCreateSamples" Content="Create Sample Files" HorizontalAlignment="Left" Margin="362,6,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Grid.Row="2" Click="btnCreateSamples_Click"/>
+        <Button x:Name="btnCreateSamples" Content="Create Sample Files" HorizontalAlignment="Left" Margin="350,6,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Grid.Row="2" Click="btnCreateSamples_Click"/>
         <Button x:Name="btnValidate" Content="Validation Errors" HorizontalAlignment="Left" Margin="160,10,0,0" VerticalAlignment="Top" Width="127" ToolTip="Only enabled if there are validation issues" ToolTipService.ShowOnDisabled="True" Click="btnValidate_Click" RenderTransformOrigin="0.449,-0.864"/>
+        <Label x:Name="lblVersion" Content="version" HorizontalAlignment="Left" Margin="23,5,0,-10" Grid.Row="2" VerticalAlignment="Center" Width="264" FontSize="10.667" Height="33"/>
 
     </Grid>
 </Window>

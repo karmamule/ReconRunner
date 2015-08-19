@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using ReconRunner.Controller;
 using System.Windows.Forms;
 using System;
+using ReconRunner.Model;
+using System.Deployment;
+using System.Threading.Tasks;
 
 namespace RRWpfUi
 {
@@ -13,10 +16,13 @@ namespace RRWpfUi
     {
         private string cr = "\r\n";
         private RRController rrController = RRController.Instance;
+        public ActionStatusEventHandler ActionStatusEvent;
 
         public MainWindow()
         {
             InitializeComponent();
+            lblVersion.Content = getVersionText();
+            rrController.ActionStatusEvent += new ActionStatusEventHandler(handleActionStatus);
         }
 
         #region Button Click Methods
@@ -27,14 +33,12 @@ namespace RRWpfUi
 
             if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
             {
-                txtStatus.Text += string.Format("Reading sources from file {0}.{1}", xmlFileOpenDialog.FileName, cr);
-                txtStatus.Text += rrController.ReadSourcesFromXMLFile(xmlFileOpenDialog.FileName) + cr;
-
+                updateStatus(string.Format("Reading sources from file {0}.", xmlFileOpenDialog.FileName));
+                rrController.ReadSourcesFromXMLFile(xmlFileOpenDialog.FileName);
             }
             else
-            {
-                txtStatus.Text += "Creation of Sources collection cancelled." + cr;
-            }
+                updateStatus("Creation of Sources collection cancelled.");
+
             checkReadyToRun();
         }
 
@@ -45,13 +49,12 @@ namespace RRWpfUi
 
             if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
             {
-                txtStatus.Text += string.Format("Reading recons from file {0}.{1}", xmlFileOpenDialog.FileName, cr);
-                txtStatus.Text += rrController.ReadReconsFromXMLFile(xmlFileOpenDialog.FileName) + cr;
+                updateStatus(string.Format("Reading recons from file {0}", xmlFileOpenDialog.FileName));
+                rrController.ReadReconsFromXMLFile(xmlFileOpenDialog.FileName);
             }
             else
-            {
-                txtStatus.Text += "Creation of Recon collection cancelled." + cr;
-            }
+                updateStatus("Creation of Recon collection cancelled.");
+
             checkReadyToRun();
         }
 
@@ -60,7 +63,7 @@ namespace RRWpfUi
             btnRunRecons.IsEnabled = rrController.ReadyToRun();
             btnValidate.IsEnabled = !btnRunRecons.IsEnabled;
             if (btnRunRecons.IsEnabled)
-                txtStatus.Text += "No validation errors. Ready to run recons." + cr;
+                updateStatus("No validation errors. Ready to run recons.");
         }
 
         private void btnRunRecons_Click(object sender, RoutedEventArgs e)
@@ -74,19 +77,22 @@ namespace RRWpfUi
 
                 if (excelFile != System.Windows.Forms.DialogResult.Cancel)
                 {
-                    txtStatus.Text += string.Format("Processing recon reports and creating {0}.{1}", fileSaveDialog.FileName, cr);
-                    string results = rrController.RunRecons(fileSaveDialog.FileName);
-                    txtStatus.Text += results;
+                    updateStatus(string.Format("Processing recon reports and creating {0}.", fileSaveDialog.FileName));
+                    Task.Factory.StartNew(() =>
+                    {
+                        rrController.RunRecons(fileSaveDialog.FileName);
+                    });
+                    updateStatus("Done.");
                 }
                 else
                 {
-                    txtStatus.Text += "Creation of Recon report Excel file cancelled." + cr;
+                    updateStatus("Creation of Recon report Excel file cancelled.");
                 }
             }
             catch (Exception ex)
             {
                 var fullErrorMessage = rrController.GetFullErrorMessage(ex);
-               txtStatus.Text += string.Format("Error while running recons: {0}{1}", cr, fullErrorMessage);
+               updateStatus(string.Format("Error while running recons: {0}", fullErrorMessage));
             }
         }
 
@@ -102,14 +108,11 @@ namespace RRWpfUi
 
                 if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
                 {
-                    txtStatus.Text += string.Format("Writing sources to file {0}.{1}",fileSaveDialog.FileName, cr);
+                    updateStatus(string.Format("Writing sources to file {0}",fileSaveDialog.FileName));
                     rrController.CreateSampleXMLSourcesFile(fileSaveDialog.FileName);
-                    txtStatus.Text += "Sources XML file created." + cr;
                 }
                 else
-                {
-                    txtStatus.Text += "Creation of Sources XML file cancelled." + cr;
-                }
+                    updateStatus("Creation of Sources XML file cancelled.");
 
                 // Save recons
                 fileSaveDialog = getFileSaveDialog("Save recons to file");
@@ -118,19 +121,16 @@ namespace RRWpfUi
 
                 if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
                 {
-                    txtStatus.Text += string.Format("Writing recons to file {0}.{1}", fileSaveDialog.FileName, cr);
+                    updateStatus(string.Format("Writing recons to file {0}", fileSaveDialog.FileName));
                     rrController.CreateSampleXMLReconReportFile(fileSaveDialog.FileName);
-                    txtStatus.Text += "Recons XML file created." + cr;
                 }
                 else
-                {
-                    txtStatus.Text += "Creation of Recons XML file cancelled." + cr;
-                }
+                    updateStatus("Creation of Recons XML file cancelled.");
             }
             catch (Exception ex)
             {
                 var fullErrorMessage = rrController.GetFullErrorMessage(ex);
-                txtStatus.Text += string.Format("Error while creating samples: {0}{1}", cr,fullErrorMessage);
+                updateStatus(string.Format("Error while creating samples: {0}", fullErrorMessage));
             }
         }
 
@@ -147,16 +147,15 @@ namespace RRWpfUi
         /// </summary>
         private void reportValidationIssues()
         {
-            txtStatus.Text += "Starting validation..." + cr;
+            updateStatus("Starting validation...");
             var validationMessages = new List<string>();
             validationMessages.AddRange(rrController.GetValidationErrors());
             //validationMessages.AddRange(rrController.GetValidationWarnings());
             if (validationMessages.Count == 0)
-                txtStatus.Text += "No validation errors or warnings found." + cr;
+                updateStatus("No validation errors or warnings found.");
             else
             {
                 validationMessages.ForEach(message => txtStatus.Text += message + cr);
-                txtStatus.Text += "Done." + cr;
             }
         }
         #endregion Button Click Methods
@@ -192,6 +191,40 @@ namespace RRWpfUi
                 fileOpenDialog.Title = dialogTitle;
             return fileOpenDialog;
         }
+
+        private string getVersionText()
+        {
+            string versionText = "Unknown";
+            if (System.Deployment.Application.ApplicationDeployment.IsNetworkDeployed)
+            {
+                Version ver = System.Deployment.Application.ApplicationDeployment.CurrentDeployment.CurrentVersion;
+                versionText = "v" + string.Format("{0}.{1}.{2}.{3}", ver.Major, ver.Minor, ver.Build, ver.Revision);
+            }
+            else
+                versionText = "version n/a until deployed";
+            return versionText;
+        }
         #endregion Dialogs  
+
+        private void handleActionStatus(object sender, ActionStatusEventArgs e)
+        {
+            // Use Dispatcher.Invoke so UI responds and shows message immediately
+            Dispatcher.Invoke(new Action(() =>
+            {
+                if (e.State == RequestState.Succeeded || e.State == RequestState.Information)
+                    updateStatus(e.Message);
+                else
+                    // Something other than success status, so show the status as well as the message
+                    updateStatus(string.Format("{0} Status: {1}", e.State.ToString(), e.Message));
+            }));
+        }
+
+        /// <summary>
+        /// Currently just appends text to a new line of txtStatus
+        /// </summary>
+        private void updateStatus(string statusText)
+        {
+            txtStatus.Text += statusText + cr;
+        }
     }
 }
