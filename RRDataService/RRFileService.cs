@@ -14,6 +14,7 @@ namespace ReconRunner.Model
         private Sources sampleSources;
         private Recons recons;
         private Sources sources;
+        public event ActionStatusEventHandler ActionStatusEvent;
 
         public RRFileService()
         {
@@ -121,6 +122,7 @@ namespace ReconRunner.Model
                                                             and bigs.atptf_id = p.portf_id
                                                             join latestAttrIns lai
                                                             on bigs.atins_id = lai.atins_id
+															and bigs.atins_release_number = lai.LatestReleaseNumber
                                                             join warehouse.attr_instrument ai
                                                             on lai.atins_id = ai.atins_id
                                                             and lai.LatestRowDate = ai.effect_date
@@ -223,6 +225,7 @@ namespace ReconRunner.Model
             };
             sampleRecons.ReconReports.Add(warehousePortGicsRecon);
 
+            /*
             // Note that queries running on two separate platforms may still be compared
             ReconReport edmDalPortDayPositionRecon = new ReconReport();
             edmDalPortDayPositionRecon.Name = "EDM to DAL Product's Positions for Day";
@@ -329,6 +332,7 @@ namespace ReconRunner.Model
             positionsMissingFkRecon.Columns.Add(originalEntityId);
 
             sampleRecons.ReconReports.Add(positionsMissingFkRecon);
+            */
         }
 
         public void WriteSampleReconsToXMLFile(string fileName)
@@ -402,6 +406,23 @@ namespace ReconRunner.Model
         {
             get { return sampleRecons; }
         }
+
+        #region Utilities
+        /// <summary>
+        /// Use to send non-critical messages.  
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="state"></param>
+        /// <param name="message"></param>
+        /// <param name="isDetail">Set to false to be seen always, if true may only be seen if user has
+        /// requested to see details or in detail logging.</param>
+        private void sendActionStatus(object sender, RequestState state, string message, bool isDetail)
+        {
+            if (ActionStatusEvent != null)
+                ActionStatusEvent(sender, new ActionStatusEventArgs(state, message, isDetail));
+        }
+
+        #endregion Utilities
 
     }
 }

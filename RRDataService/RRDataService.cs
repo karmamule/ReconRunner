@@ -15,7 +15,7 @@ namespace ReconRunner.Model
         #region Constructors
         private static RRDataService instance = new RRDataService();
         public static RRDataService Instance { get { return instance; } }
-        
+        public event ActionStatusEventHandler ActionStatusEvent;
 
         // A set of open connections available for use
         // Use OpenConnections() and CloseConnections() to manage them for a given recon
@@ -261,6 +261,12 @@ namespace ReconRunner.Model
             DataTable dt = new DataTable();
             dra.FillFromReader(dt, reader);
             return dt;
+        }
+
+        private void sendActionStatus(object sender, RequestState state, string message, bool isDetail)
+        {
+            if (ActionStatusEvent != null)
+                ActionStatusEvent(sender, new ActionStatusEventArgs(state, message, isDetail));
         }
 
         /// <summary>

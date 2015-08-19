@@ -45,6 +45,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ActionStatusEvent.cs" />
     <Compile Include="DataReaderAdapter.cs">
       <SubType>Component</SubType>
     </Compile>

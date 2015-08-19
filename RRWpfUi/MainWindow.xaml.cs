@@ -86,7 +86,7 @@ namespace RRWpfUi
             catch (Exception ex)
             {
                 var fullErrorMessage = rrController.GetFullErrorMessage(ex);
-               txtStatus.Text += string.Format("Error while creating samples: {0}{1}", cr, fullErrorMessage);
+               txtStatus.Text += string.Format("Error while running recons: {0}{1}", cr, fullErrorMessage);
             }
         }
 

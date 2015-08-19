@@ -17,6 +17,7 @@ namespace ReconRunner.Controller
 
         private RRDataService rrDataService = RRDataService.Instance;
         private RRExcelService rrExcelService = RRExcelService.Instance;
+        public event ActionStatusEventHandler ActionStatusEvent;
         string pipePlaceholderRegex = @"\|(\w+)\|";
 
         // Each 2-query recon is divided into three sections:
@@ -53,8 +54,10 @@ namespace ReconRunner.Controller
         Dictionary<string, DataRow> q2Rows;
         Dictionary<string, Cell> excelRow;
 
-        static RRController()
+        private RRController()
         {
+            rrDataService.ActionStatusEvent += new ActionStatusEventHandler(relayActionStatusEvent);
+            rrExcelService.ActionStatusEvent += new ActionStatusEventHandler(relayActionStatusEvent);
         }
 
         public static RRController Instance
@@ -75,7 +78,7 @@ namespace ReconRunner.Controller
         /// <param name="fileName"></param>
         public void CreateSampleXMLReconReportFile(string fileName)
         {
-            new RRFileService().WriteSampleReconsToXMLFile(fileName);
+            getNewFileService().WriteSampleReconsToXMLFile(fileName);
         }
 
         /// <summary>
@@ -86,7 +89,7 @@ namespace ReconRunner.Controller
         /// <param name="fileName"></param>
         public void CreateSampleXMLSourcesFile(string fileName)
         {
-            new RRFileService().WriteSampleSourcesToXMLFile(fileName);
+            getNewFileService().WriteSampleSourcesToXMLFile(fileName);
         }
         
         /// <summary>
@@ -95,7 +98,7 @@ namespace ReconRunner.Controller
         /// <param name="fileName"></param>
         public void WriteReconsToXMLFile(string fileName)
         {
-            new RRFileService().WriteReconsToXMLFile(recons, fileName);
+            getNewFileService().WriteReconsToXMLFile(recons, fileName);
         }
 
         /// <summary>
@@ -104,7 +107,7 @@ namespace ReconRunner.Controller
         /// <param name="fileName"></param>
         public void WriteSourcesToXMLFile(string fileName)
         {
-            new RRFileService().WriteSourcesToXMLFile(sources, fileName);
+            getNewFileService().WriteSourcesToXMLFile(sources, fileName);
         }
         
         /// <summary>
@@ -117,7 +120,7 @@ namespace ReconRunner.Controller
         {
             try
             {
-                recons = new RRFileService().ReadReconsFromXMLFile(fileName);
+                recons = getNewFileService().ReadReconsFromXMLFile(fileName);
                 return "Done.";
             }
             catch (Exception e)
@@ -142,7 +145,7 @@ namespace ReconRunner.Controller
         {
             try
             {
-                sources = new RRFileService().ReadSourcesFromXMLFile(fileName);
+                sources = getNewFileService().ReadSourcesFromXMLFile(fileName);
                 return "Done.";
             }
             catch (Exception e)
@@ -1090,12 +1093,50 @@ namespace ReconRunner.Controller
         /// </summary>
         public void UseSampleData()
         {
-            var rrFileService = new RRFileService();
+            var rrFileService = getNewFileService();
             sources = rrFileService.SampleSources;
             recons = rrFileService.SampleRecons;
             rrDataService.Sources = sources;
             rrDataService.Recons = recons;
         }
+
+        /// <summary>
+        /// If we get an ActionStatusEvent from a service layer, just relay it along
+        /// so the UI can act on it
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void relayActionStatusEvent(object sender, ActionStatusEventArgs e)
+        {
+            if (ActionStatusEvent != null)
+                ActionStatusEvent(sender, e);
+            if (e.State == RequestState.Error || e.State == RequestState.FatalError)
+                throw new ApplicationException(string.Format("{0} halting on serious {1}: {2}", sender.ToString(), e.State, e.Message));
+            else
+                sendActionStatus(this, e.State, e.Message, false);
+        }
+
+        /// <summary>
+        /// Use to send non-critical messages.  
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="state"></param>
+        /// <param name="message"></param>
+        /// <param name="isDetail">Set to false to be seen always, if true may only be seen if consumer of event has
+        /// requested to see details or in detail logging.</param>
+        private void sendActionStatus(object sender, RequestState state, string message, bool isDetail)
+        {
+            if (ActionStatusEvent != null)
+                ActionStatusEvent(sender, new ActionStatusEventArgs(state, message, isDetail));
+        }
+
+        private RRFileService getNewFileService()
+        {
+            RRFileService rrFileService = new RRFileService();
+            rrFileService.ActionStatusEvent += new ActionStatusEventHandler(relayActionStatusEvent);
+            return rrFileService;
+        }
+
         #endregion Utilities
     }
 }

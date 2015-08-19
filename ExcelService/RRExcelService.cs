@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using ReconRunner.Model;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Drawing;
 
@@ -78,6 +79,7 @@ namespace ReconRunner.ExcelService
         private Excel.Range ecRange;
         private int currRowNumber = 1;
         private object missing = Type.Missing;
+        public event ActionStatusEventHandler ActionStatusEvent;
 
         static RRExcelService()
         {
@@ -278,5 +280,22 @@ namespace ReconRunner.ExcelService
         {
             ((Excel.Worksheet)ecWB.Sheets[wsIndex]).Delete();
         }
+
+        #region Utilities
+        /// <summary>
+        /// Use to send non-critical messages.  
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="state"></param>
+        /// <param name="message"></param>
+        /// <param name="isDetail">Set to false to be seen always, if true may only be seen if user has
+        /// requested to see details or in detail logging.</param>
+        private void sendActionStatus(object sender, RequestState state, string message, bool isDetail)
+        {
+            if (ActionStatusEvent != null)
+                ActionStatusEvent(sender, new ActionStatusEventArgs(state, message, isDetail));
+        }
+
+        #endregion Utilities
     }
 }
