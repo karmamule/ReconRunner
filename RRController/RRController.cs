@@ -45,6 +45,12 @@ namespace ReconRunner.Controller
             set { sources = value; }
         }
 
+        public List<ReconReport> ReconReports
+        {
+            get { return recons.ReconReports; }
+            set { recons.ReconReports = value; }
+        }
+
         // Use to translate index to column letter when # columns is variable
         string columnLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";  // *** ASSUMPTION: We'll never go past Z in columns
         // These will hold DataRow objects, with the string index key for each being built from its identifying columns

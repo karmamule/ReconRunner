@@ -41,6 +41,11 @@ namespace ReconRunner.Model
             set { subValue = value; }
         }
 
+        public override string ToString()
+        {
+            return string.Format("{0}: {1}", subName, subValue);
+        }
+
     }
 
     [XmlRoot("QueryVariable")]
@@ -70,6 +75,14 @@ namespace ReconRunner.Model
             get { return queryNumber; }
             set { queryNumber = value; }
         }
+        public override string ToString()
+        {
+            if (!QuerySpecific)
+                return string.Format("{0}: {1}", SubName, SubValue);
+            else
+                return string.Format("{0} ({1}): {2}", SubName, QueryNumber.ToString(), SubValue);
+        }
+
     }
     #endregion Variable
 
@@ -254,6 +267,11 @@ namespace ReconRunner.Model
             alwaysDisplay = false;
             identifyingColumn = false;
             tolerance = 0;
+        }
+
+        public override string ToString()
+        {
+            return label;
         }
 
         /// <summary>
