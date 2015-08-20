@@ -15,6 +15,8 @@ namespace RRWpfUi
     public partial class MainWindow : Window
     {
         private string cr = "\r\n";
+        private string noReconText = "No recon reports loaded";
+        private string chooseReconText = "Click to choose a report to edit";
         private RRController rrController = RRController.Instance;
         public ActionStatusEventHandler ActionStatusEvent;
 
@@ -51,11 +53,32 @@ namespace RRWpfUi
             {
                 updateStatus(string.Format("Reading recons from file {0}", xmlFileOpenDialog.FileName));
                 rrController.ReadReconsFromXMLFile(xmlFileOpenDialog.FileName);
+                loadCmbChooseRecon();
             }
             else
                 updateStatus("Creation of Recon collection cancelled.");
 
             checkReadyToRun();
+        }
+
+        private void loadCmbChooseRecon()
+        {
+
+            if (rrController.Recons.ReconReports.Count == 0)
+            {
+                cmbChooseRecon.Items.Clear();
+                cmbChooseRecon.Items.Add(noReconText);
+                cmbChooseRecon.SelectedItem = cmbChooseRecon.Items[0];
+                cmbChooseRecon.IsEnabled = false;
+            }
+            else
+            {
+                cmbChooseRecon.Items.Clear();
+                cmbChooseRecon.Items.Add(chooseReconText);
+                rrController.Recons.ReconReports.ForEach(recon => cmbChooseRecon.Items.Add(recon.Name));
+                cmbChooseRecon.SelectedItem = cmbChooseRecon.Items[0];
+                cmbChooseRecon.IsEnabled = true;
+            }
         }
 
         private void checkReadyToRun()
@@ -92,7 +115,7 @@ namespace RRWpfUi
             catch (Exception ex)
             {
                 var fullErrorMessage = rrController.GetFullErrorMessage(ex);
-               updateStatus(string.Format("Error while running recons: {0}", fullErrorMessage));
+                updateStatus(string.Format("Error while running recons: {0}", fullErrorMessage));
             }
         }
 
@@ -108,7 +131,7 @@ namespace RRWpfUi
 
                 if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
                 {
-                    updateStatus(string.Format("Writing sources to file {0}",fileSaveDialog.FileName));
+                    updateStatus(string.Format("Writing sources to file {0}", fileSaveDialog.FileName));
                     rrController.CreateSampleXMLSourcesFile(fileSaveDialog.FileName);
                 }
                 else
@@ -225,6 +248,39 @@ namespace RRWpfUi
         private void updateStatus(string statusText)
         {
             txtStatus.Text += statusText + cr;
+        }
+
+        private void btnClearStatus_Click(object sender, RoutedEventArgs e)
+        {
+            txtStatus.Text = string.Empty;
+        }
+
+        private void btnEdit_Recons_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void btnSaveEdits_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void cmbChooseRecon_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (rrPropertyGrid != null)
+            {
+                if (cmbChooseRecon.Items.Count == 0 || cmbChooseRecon.SelectedIndex == 0)
+                {
+                    rrPropertyGrid.Visibility = Visibility.Hidden;
+                    btnSaveRecons.IsEnabled = false;
+                }
+                else
+                {
+                    rrPropertyGrid.Visibility = Visibility.Visible;
+                    rrPropertyGrid.SelectedObject = rrController.Recons.ReconReports.Find(rr => rr.Name == cmbChooseRecon.SelectedItem.ToString());
+                    btnSaveRecons.IsEnabled = true;
+                }
+            }
         }
     }
 }

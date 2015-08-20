@@ -1,14 +1,16 @@
-﻿<Window x:Name="winReconRunner" x:Class="RRWpfUi.MainWindow"
+﻿<Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:RRWpfUi"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit" x:Name="winReconRunner" x:Class="RRWpfUi.MainWindow"
         mc:Ignorable="d"
-        Title="Recon Runner" Height="540.566" Width="526.886" Icon="Resources/shell32_62999.ico">
+        Title="Recon Runner" Height="550" Width="1080" Icon="Resources/shell32_62999.ico">
     <Window.Resources>
         <local:PercentageConverter x:Key="PercentageConverter" />
     </Window.Resources>
+    
     <Window.Background>
         <LinearGradientBrush EndPoint="0.5,1" MappingMode="RelativeToBoundingBox" StartPoint="0.5,0">
             <GradientStop Color="#FF5E9EDE"/>
@@ -16,29 +18,44 @@
             <GradientStop Color="#FF78A2EC" Offset="0.227"/>
         </LinearGradientBrush>
     </Window.Background>
-    <Grid x:Name="gridMain" Margin="10">
+    <Grid x:Name="gridMain" Margin="5   ">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="firstColumn" Width="536"/>
+            <ColumnDefinition x:Name="secondColumn" Width="500  "/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="106*"/>
-            <RowDefinition Height="357*"/>
-            <RowDefinition Height="28*"/>
+            <RowDefinition x:Name="firstRow" Height="106*"/>
+            <RowDefinition x:Name="secondRow" Height="357*"/>
+            <RowDefinition x:Name="thirdRow" Height="28*"/>
         </Grid.RowDefinitions>
-        <Button x:Name="btnLoadSources" Content="Load Sources File" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Sources XML file to use" Click="btnLoadSources_Click"/>
-        <Button x:Name="btnLoadRecons" Content="Load Recons File" HorizontalAlignment="Left" Margin="10,45,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Click="btnLoadRecons_Click"/>
-        <Button x:Name="btnRunRecons" Content="Run Recons" HorizontalAlignment="Left" Margin="160,45,0,0" VerticalAlignment="Top" Width="127" IsEnabled="False" ToolTip="Click to run recons after Sources and Recons XML files have been loaded. If disabled there are errors to be resolved." ToolTipService.ShowOnDisabled="True" Click="btnRunRecons_Click"/>
-        <Label x:Name="lblStatus" Content="Status" HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0.774,3.55" Margin="10,81,0,0" Grid.RowSpan="2"/>
-        <ScrollViewer x:Name="scrollViewStatus" CanContentScroll="false" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Hidden" Margin="5,25,5,0">
-            <TextBlock x:Name="txtStatus" Grid.Row="1" 
-                       HorizontalAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" 
-                       Height="Auto" MinHeight="320"
-                       Width="{Binding Converter={StaticResource PercentageConverter},
-                                ElementName=scrollViewStatus,
-                                Path=ActualWidth,
-                                ConverterParameter=0.95}" 
-                       ToolTip="Information on file validation and/or recon run status will appear here." Background="White" />
+        <Button x:Name="btnLoadSources" Content="Load Sources File" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Sources XML file to use" Click="btnLoadSources_Click" Height="22"/>
+        <Button x:Name="btnLoadRecons" Content="Load Recons File" HorizontalAlignment="Left" Margin="10,45,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Click="btnLoadRecons_Click" Height="22"/>
+        <Button x:Name="btnRunRecons" Content="Run Recons" HorizontalAlignment="Left" Margin="160,45,0,0" VerticalAlignment="Top" Width="127" IsEnabled="False" ToolTip="Click to run recons after Sources and Recons XML files have been loaded. If disabled there are errors to be resolved." ToolTipService.ShowOnDisabled="True" Click="btnRunRecons_Click" Height="22"/>
+        <Label x:Name="lblStatus" Content="Status" HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0.774,3.55" Margin="10,81,0,0" Height="26" Width="42"/>
+        <ScrollViewer x:Name="scrollViewStatus" CanContentScroll="false" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center" VerticalScrollBarVisibility="Auto" 
+			Width="520" 
+			HorizontalScrollBarVisibility="Hidden" Margin="6,5,10,2" RenderTransformOrigin="0.5,0.5" >
+            <TextBlock x:Name="txtStatus" Grid.Row="1" Grid.Column="0"
+				HorizontalAlignment="center" TextWrapping="Wrap" VerticalAlignment="Center" 
+				Height="{Binding ActualHeight, ConverterParameter=0.98, Converter={StaticResource PercentageConverter}, ElementName=scrollViewStatus}" 
+				Width="{Binding ActualWidth, ConverterParameter=0.98, Converter={StaticResource PercentageConverter}, ElementName=scrollViewStatus}" 
+				ToolTip="Information on file validation and/or recon run status will appear here." Background="White" Text="Welcome to ReconRunner!" Padding="5,5,5,5" />
         </ScrollViewer>
-        <Button x:Name="btnCreateSamples" Content="Create Sample Files" HorizontalAlignment="Left" Margin="350,6,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Grid.Row="2" Click="btnCreateSamples_Click"/>
-        <Button x:Name="btnValidate" Content="Validation Errors" HorizontalAlignment="Left" Margin="160,10,0,0" VerticalAlignment="Top" Width="127" ToolTip="Only enabled if there are validation issues" ToolTipService.ShowOnDisabled="True" Click="btnValidate_Click" RenderTransformOrigin="0.449,-0.864"/>
-        <Label x:Name="lblVersion" Content="version" HorizontalAlignment="Left" Margin="23,5,0,-10" Grid.Row="2" VerticalAlignment="Center" Width="264" FontSize="10.667" Height="33"/>
+        <Button x:Name="btnCreateSamples" Content="Create Sample Files" HorizontalAlignment="Left" Margin="387,5,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Grid.Row="2" Click="btnCreateSamples_Click" Height="22"/>
+        <Button x:Name="btnValidate" Content="Validation Errors" HorizontalAlignment="Left" Margin="160,10,0,0" VerticalAlignment="Top" Width="127" ToolTip="Only enabled if there are validation issues" ToolTipService.ShowOnDisabled="True" Click="btnValidate_Click" RenderTransformOrigin="0.449,-0.864" Height="22"/>
+        <Label x:Name="lblVersion" Content="version" HorizontalAlignment="Left" Margin="23,5,0,-10" Grid.Row="2" VerticalAlignment="Center" Width="174" FontSize="10.667" Height="34"/>
+        <Button x:Name="btnClearStatus" Content="Clear Status" HorizontalAlignment="Left" Margin="245,5   ,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Grid.Row="2" Click="btnClearStatus_Click" Height="22"/>
+
+        <!-- Recon editing area -->
+        <Button x:Name="btnSaveRecons" Content="Save Recons to File" HorizontalAlignment="Right" Margin="0,45,5,0" VerticalAlignment="Top" Width="127" IsEnabled="False" ToolTip="Will prompt you for a filename to save your edited recon reports to." ToolTipService.ShowOnDisabled="True" Click="btnSaveEdits_Click" Grid.Column="1" Grid.Row="0" Height="22"/>
+        <ComboBox Name="cmbChooseRecon" Text="Choose a Recon to Edit" Height="22" Grid.Row="2" Grid.Column="1" IsEnabled="False" FontSize="10.667" ToolTip="Click to select a recon to edit below"  SelectionChanged="cmbChooseRecon_SelectionChanged">
+            <ComboBoxItem IsSelected="True">No recon reports loaded</ComboBoxItem>
+        </ComboBox>
+        <xctk:PropertyGrid x:Name="rrPropertyGrid" Visibility="Hidden" Padding="5" Margin="0,3,0,0" Background="#FFD2DBF3" Grid.Row="1" Grid.Column="1"
+            AutoGenerateProperties="True"
+            Height="{Binding ActualHeight, ConverterParameter=0.98, Converter={StaticResource PercentageConverter}, ElementName=scrollViewStatus}" 
+		    Width="{Binding ActualWidth, ConverterParameter=0.95, Converter={StaticResource PercentageConverter}, ElementName=scrollViewStatus}">
+        </xctk:PropertyGrid>
 
     </Grid>
 </Window>
