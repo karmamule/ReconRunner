@@ -98,6 +98,11 @@ namespace ReconRunner.Model
         string rrConnStringName;
         string sql;
 
+        public override string ToString()
+        {
+            return name;
+        }
+
         [XmlAttribute ("Name")]
         public string Name
         {
@@ -125,6 +130,18 @@ namespace ReconRunner.Model
             }
             set { sql = value.Value; }
         }
+
+        public string SqlText
+        {
+            get
+            {
+                return SQL.Value;
+            }
+            set
+            {
+                SQL.Value = value;
+            }
+        }
     }
     #endregion RRQuery
 
@@ -150,6 +167,11 @@ namespace ReconRunner.Model
             set { template = value; }
         }
 
+        public override string ToString()
+        {
+            return name;
+        }
+
         [XmlAttribute ("Name")]
         public string Name
         {
@@ -173,6 +195,11 @@ namespace ReconRunner.Model
         string templateName;
         private DatabaseType databaseType;
         List<Variable> templateVariables;
+
+        public override string ToString()
+        {
+            return name;
+        }
 
         [XmlAttribute("Name")]
         public string Name

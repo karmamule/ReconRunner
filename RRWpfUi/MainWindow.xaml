@@ -41,7 +41,7 @@
     <Grid x:Name="gridMain" Margin="5">
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="firstColumn" Width="536"/>
-            <ColumnDefinition x:Name="secondColumn" Width="500  "/>
+            <ColumnDefinition x:Name="secondColumn" Width="500*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition x:Name="firstRow" Height="106*"/>
@@ -67,8 +67,8 @@
         <Button x:Name="btnClearStatus" Content="Clear Status" HorizontalAlignment="Left" Margin="245,5   ,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Grid.Row="2" Click="btnClearStatus_Click" Height="22"/>
 
         <!-- Eediting area -->
-        <RadioButton x:Name="radRecons" Content="Recons" GroupName="SourcesOrRecons" IsChecked="True"  Grid.Column="1" HorizontalAlignment="Left" Margin="285,52,0,0" VerticalAlignment="Top"/>
-            <RadioButton x:Name="radSources" Content="Sources" GroupName="SourcesOrRecons" IsChecked="False"  Grid.Column="1" HorizontalAlignment="Left" Margin="285,75,0,0" VerticalAlignment="Top"/>
+        <RadioButton x:Name="radRecons" Content="Recons" GroupName="SourcesOrRecons" IsChecked="True"  Grid.Column="1" HorizontalAlignment="Right" Margin="285,52, 150,0" VerticalAlignment="Top" Checked="radEntity_Checked"/>
+        <RadioButton x:Name="radSources" Content="Sources" GroupName="SourcesOrRecons" IsChecked="False"  Grid.Column="1" HorizontalAlignment="right" Margin="285,75,146,0" VerticalAlignment="Top" Checked="radEntity_Checked"/>
         <Button x:Name="btnSaveEdits" HorizontalAlignment="Right" Margin="0,53,0,0" VerticalAlignment="Top" Width="35" Height="35"  IsEnabled="False" ToolTip="Save to XML file" Style="{StaticResource ButtonEnabled}" ToolTipService.ShowOnDisabled="True" Click="btnSaveEdits_Click" Grid.Column="1" Grid.Row="0">
             <StackPanel Orientation="Horizontal">
                 <Image x:Name="saveImage" VerticalAlignment="Center" HorizontalAlignment="Center" Source="Resources/Save.png" Style="{StaticResource ImageEnabled}"/>
@@ -83,13 +83,10 @@
             <StackPanel Orientation="Horizontal">
                 <Image x:Name="deleteImage" VerticalAlignment="Center" HorizontalAlignment="Center" Source="Resources/Trash.png" Style="{StaticResource ImageEnabled}"/>
             </StackPanel>
-        </Button>        
+        </Button>
         <xctk:PropertyGrid x:Name="rrPropertyGrid" Visibility="Hidden" Padding="5" Margin="0,3,0,0" Background="#FFD2DBF3" Grid.Row="1" Grid.Column="1"
-            AutoGenerateProperties="True"
-            Height="{Binding ActualHeight, ConverterParameter=0.98, Converter={StaticResource PercentageConverter}, ElementName=scrollViewStatus}" 
-		    Width="{Binding ActualWidth, ConverterParameter=0.95, Converter={StaticResource PercentageConverter}, ElementName=scrollViewStatus}">
-        </xctk:PropertyGrid>
-
+            AutoGenerateProperties="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+       
         <ComboBox Name="cmbChooseItem" Text="Choose a Recon to Edit" Height="22" Grid.Row="2" Grid.Column="1" IsEnabled="False" FontSize="10.667" ToolTip="Click to select a recon to edit below"  SelectionChanged="cmbChooseRecon_SelectionChanged">
             <ComboBoxItem IsSelected="True">No sources or recons loaded</ComboBoxItem>
         </ComboBox>
