@@ -1,4 +1,4 @@
-﻿<Window
+﻿<Window 
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -9,8 +9,28 @@
         Title="Recon Runner" Height="550" Width="1080" Icon="Resources/shell32_62999.ico">
     <Window.Resources>
         <local:PercentageConverter x:Key="PercentageConverter" />
+        <Style x:Key="ImageEnabled" TargetType="Image">
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.5"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="True">
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ButtonEnabled" TargetType="Button">
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.5"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="True">
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
-    
+
     <Window.Background>
         <LinearGradientBrush EndPoint="0.5,1" MappingMode="RelativeToBoundingBox" StartPoint="0.5,0">
             <GradientStop Color="#FF5E9EDE"/>
@@ -18,7 +38,7 @@
             <GradientStop Color="#FF78A2EC" Offset="0.227"/>
         </LinearGradientBrush>
     </Window.Background>
-    <Grid x:Name="gridMain" Margin="5   ">
+    <Grid x:Name="gridMain" Margin="5">
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="firstColumn" Width="536"/>
             <ColumnDefinition x:Name="secondColumn" Width="500  "/>
@@ -46,16 +66,32 @@
         <Label x:Name="lblVersion" Content="version" HorizontalAlignment="Left" Margin="23,5,0,-10" Grid.Row="2" VerticalAlignment="Center" Width="174" FontSize="10.667" Height="34"/>
         <Button x:Name="btnClearStatus" Content="Clear Status" HorizontalAlignment="Left" Margin="245,5   ,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Grid.Row="2" Click="btnClearStatus_Click" Height="22"/>
 
-        <!-- Recon editing area -->
-        <Button x:Name="btnSaveRecons" Content="Save Recons to File" HorizontalAlignment="Right" Margin="0,45,5,0" VerticalAlignment="Top" Width="127" IsEnabled="False" ToolTip="Will prompt you for a filename to save your edited recon reports to." ToolTipService.ShowOnDisabled="True" Click="btnSaveEdits_Click" Grid.Column="1" Grid.Row="0" Height="22"/>
-        <ComboBox Name="cmbChooseRecon" Text="Choose a Recon to Edit" Height="22" Grid.Row="2" Grid.Column="1" IsEnabled="False" FontSize="10.667" ToolTip="Click to select a recon to edit below"  SelectionChanged="cmbChooseRecon_SelectionChanged">
-            <ComboBoxItem IsSelected="True">No recon reports loaded</ComboBoxItem>
-        </ComboBox>
+        <!-- Eediting area -->
+        <RadioButton x:Name="radRecons" Content="Recons" GroupName="SourcesOrRecons" IsChecked="True"  Grid.Column="1" HorizontalAlignment="Left" Margin="285,52,0,0" VerticalAlignment="Top"/>
+            <RadioButton x:Name="radSources" Content="Sources" GroupName="SourcesOrRecons" IsChecked="False"  Grid.Column="1" HorizontalAlignment="Left" Margin="285,75,0,0" VerticalAlignment="Top"/>
+        <Button x:Name="btnSaveEdits" HorizontalAlignment="Right" Margin="0,53,0,0" VerticalAlignment="Top" Width="35" Height="35"  IsEnabled="False" ToolTip="Save to XML file" Style="{StaticResource ButtonEnabled}" ToolTipService.ShowOnDisabled="True" Click="btnSaveEdits_Click" Grid.Column="1" Grid.Row="0">
+            <StackPanel Orientation="Horizontal">
+                <Image x:Name="saveImage" VerticalAlignment="Center" HorizontalAlignment="Center" Source="Resources/Save.png" Style="{StaticResource ImageEnabled}"/>
+            </StackPanel>
+        </Button>
+        <Button x:Name="btnCopyItem" HorizontalAlignment="Right" Margin="0,53,40,0" VerticalAlignment="Top" Width="35" Height="35"  IsEnabled="False" ToolTip="Copy selected item" Style="{StaticResource ButtonEnabled}" ToolTipService.ShowOnDisabled="True" Grid.Column="1" Grid.Row="0" Click="btnCopyItem_Click">
+            <StackPanel Orientation="Horizontal">
+                <Image x:Name="copyImage" VerticalAlignment="Center" HorizontalAlignment="Center" Source="Resources/Copy.png" Style="{StaticResource ImageEnabled}"/>
+            </StackPanel>
+        </Button>
+        <Button x:Name="btnDeleteItem" HorizontalAlignment="Right" Margin="0,53,80,0" VerticalAlignment="Top" Width="35" Height="35"  IsEnabled="False" ToolTip="Delete selected item" Style="{StaticResource ButtonEnabled}" ToolTipService.ShowOnDisabled="True" Grid.Column="1" Grid.Row="0" Click="btnDeleteItem_Click">
+            <StackPanel Orientation="Horizontal">
+                <Image x:Name="deleteImage" VerticalAlignment="Center" HorizontalAlignment="Center" Source="Resources/Trash.png" Style="{StaticResource ImageEnabled}"/>
+            </StackPanel>
+        </Button>        
         <xctk:PropertyGrid x:Name="rrPropertyGrid" Visibility="Hidden" Padding="5" Margin="0,3,0,0" Background="#FFD2DBF3" Grid.Row="1" Grid.Column="1"
             AutoGenerateProperties="True"
             Height="{Binding ActualHeight, ConverterParameter=0.98, Converter={StaticResource PercentageConverter}, ElementName=scrollViewStatus}" 
 		    Width="{Binding ActualWidth, ConverterParameter=0.95, Converter={StaticResource PercentageConverter}, ElementName=scrollViewStatus}">
         </xctk:PropertyGrid>
 
+        <ComboBox Name="cmbChooseItem" Text="Choose a Recon to Edit" Height="22" Grid.Row="2" Grid.Column="1" IsEnabled="False" FontSize="10.667" ToolTip="Click to select a recon to edit below"  SelectionChanged="cmbChooseRecon_SelectionChanged">
+            <ComboBoxItem IsSelected="True">No sources or recons loaded</ComboBoxItem>
+        </ComboBox>
     </Grid>
 </Window>

@@ -25,6 +25,7 @@ namespace RRWpfUi
             InitializeComponent();
             lblVersion.Content = getVersionText();
             rrController.ActionStatusEvent += new ActionStatusEventHandler(handleActionStatus);
+            enableEditingControls(false);
         }
 
         #region Button Click Methods
@@ -66,18 +67,18 @@ namespace RRWpfUi
 
             if (rrController.Recons.ReconReports.Count == 0)
             {
-                cmbChooseRecon.Items.Clear();
-                cmbChooseRecon.Items.Add(noReconText);
-                cmbChooseRecon.SelectedItem = cmbChooseRecon.Items[0];
-                cmbChooseRecon.IsEnabled = false;
+                cmbChooseItem.Items.Clear();
+                cmbChooseItem.Items.Add(noReconText);
+                cmbChooseItem.SelectedItem = cmbChooseItem.Items[0];
+                cmbChooseItem.IsEnabled = false;
             }
             else
             {
-                cmbChooseRecon.Items.Clear();
-                cmbChooseRecon.Items.Add(chooseReconText);
-                rrController.Recons.ReconReports.ForEach(recon => cmbChooseRecon.Items.Add(recon.Name));
-                cmbChooseRecon.SelectedItem = cmbChooseRecon.Items[0];
-                cmbChooseRecon.IsEnabled = true;
+                cmbChooseItem.Items.Clear();
+                cmbChooseItem.Items.Add(chooseReconText);
+                rrController.Recons.ReconReports.ForEach(recon => cmbChooseItem.Items.Add(recon.Name));
+                cmbChooseItem.SelectedItem = cmbChooseItem.Items[0];
+                cmbChooseItem.IsEnabled = true;
             }
         }
 
@@ -282,18 +283,42 @@ namespace RRWpfUi
         {
             if (rrPropertyGrid != null)
             {
-                if (cmbChooseRecon.Items.Count == 0 || cmbChooseRecon.SelectedIndex == 0)
+                if (cmbChooseItem.Items.Count == 0 || cmbChooseItem.SelectedIndex == 0)
                 {
                     rrPropertyGrid.Visibility = Visibility.Hidden;
-                    btnSaveRecons.IsEnabled = false;
+                    enableEditingControls(false);
+                    btnSaveEdits.IsEnabled = false;
                 }
                 else
                 {
                     rrPropertyGrid.Visibility = Visibility.Visible;
-                    rrPropertyGrid.SelectedObject = rrController.Recons.ReconReports.Find(rr => rr.Name == cmbChooseRecon.SelectedItem.ToString());
-                    btnSaveRecons.IsEnabled = true;
+                    rrPropertyGrid.SelectedObject = rrController.Recons.ReconReports.Find(rr => rr.Name == cmbChooseItem.SelectedItem.ToString());
+                    enableEditingControls(true);
+                    btnSaveEdits.IsEnabled = true;
                 }
             }
+        }
+
+        private void enableEditingControls(bool isEnabled)
+        {
+            btnSaveEdits.IsEnabled = isEnabled;
+            btnDeleteItem.IsEnabled = isEnabled;
+            btnCopyItem.IsEnabled = isEnabled;
+        }
+
+        private void btnDeleteItem_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void btnCopyItem_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void saveImage_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            updateStatus("Ping...");
         }
     }
 }
