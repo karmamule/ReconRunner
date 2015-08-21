@@ -99,6 +99,11 @@ namespace ReconRunner.Controller
             getNewFileService().WriteSampleSourcesToXMLFile(fileName);
             sendActionStatus(this, RequestState.Succeeded, "Created sample sources XML file.", false);
         }
+
+        public void WriteReconsToXmlFile(string fileName)
+        {
+            getNewFileService().WriteReconsToXMLFile(recons, fileName);
+        }
         
         /// <summary>
         /// Read in information for all the recons to be done from the specified xml file.  Note that 
