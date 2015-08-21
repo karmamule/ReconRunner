@@ -35,8 +35,8 @@ namespace RRWpfUi
 
             if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
             {
-                updateStatus(string.Format("Reading sources from file {0}.", xmlFileOpenDialog.FileName));
                 rrController.ReadSourcesFromXMLFile(xmlFileOpenDialog.FileName);
+                updateStatus(string.Format("Read sources from file {0}.", xmlFileOpenDialog.FileName));
             }
             else
                 updateStatus("Creation of Sources collection cancelled.");
@@ -51,9 +51,9 @@ namespace RRWpfUi
 
             if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
             {
-                updateStatus(string.Format("Reading recons from file {0}", xmlFileOpenDialog.FileName));
                 rrController.ReadReconsFromXMLFile(xmlFileOpenDialog.FileName);
                 loadCmbChooseRecon();
+                updateStatus(string.Format("Loaded recons from file {0}", xmlFileOpenDialog.FileName));
             }
             else
                 updateStatus("Creation of Recon collection cancelled.");
@@ -131,8 +131,8 @@ namespace RRWpfUi
 
                 if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
                 {
-                    updateStatus(string.Format("Writing sources to file {0}", fileSaveDialog.FileName));
                     rrController.CreateSampleXMLSourcesFile(fileSaveDialog.FileName);
+                    updateStatus(string.Format("Wrote sample sources to file {0}", fileSaveDialog.FileName));
                 }
                 else
                     updateStatus("Creation of Sources XML file cancelled.");
@@ -144,8 +144,8 @@ namespace RRWpfUi
 
                 if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
                 {
-                    updateStatus(string.Format("Writing recons to file {0}", fileSaveDialog.FileName));
                     rrController.CreateSampleXMLReconReportFile(fileSaveDialog.FileName);
+                    updateStatus(string.Format("Wrote sample recons to file {0}", fileSaveDialog.FileName));
                 }
                 else
                     updateStatus("Creation of Recons XML file cancelled.");
@@ -255,14 +255,27 @@ namespace RRWpfUi
             txtStatus.Text = string.Empty;
         }
 
-        private void btnEdit_Recons_Click(object sender, RoutedEventArgs e)
-        {
-
-        }
-
         private void btnSaveEdits_Click(object sender, RoutedEventArgs e)
         {
+            var fileSaveDialog = getFileSaveDialog("Save recons to file");
+            fileSaveDialog.Title = "Save Recons";
+            var xmlFile = fileSaveDialog.ShowDialog();
 
+            try
+            {
+                if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
+                {
+                    rrController.WriteReconsToXmlFile(fileSaveDialog.FileName);
+                    updateStatus(string.Format("Wrote recons to file {0}", fileSaveDialog.FileName));
+                }
+                else
+                    updateStatus("Creation of Recons XML file cancelled.");
+                checkReadyToRun();
+            }
+            catch (Exception ex)
+            {
+                updateStatus(string.Format("Unable to save changes to file {0}: {1}", xmlFile, rrController.GetFullErrorMessage(ex)));
+            }
         }
 
         private void cmbChooseRecon_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
