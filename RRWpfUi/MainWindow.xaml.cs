@@ -14,9 +14,15 @@ namespace RRWpfUi
     /// </summary>
     public partial class MainWindow : Window
     {
+        enum Entity
+        {
+            Sources, Recons
+        }
         private string cr = "\r\n";
         private string noReconText = "No recon reports loaded";
         private string chooseReconText = "Click to choose a report to edit";
+        private string noSourcesText = "Sources not loaded yet";
+        private string chooseSourcesText = "Click if you want to edit sources";
         private RRController rrController = RRController.Instance;
         public ActionStatusEventHandler ActionStatusEvent;
 
@@ -37,7 +43,11 @@ namespace RRWpfUi
             if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
             {
                 rrController.ReadSourcesFromXMLFile(xmlFileOpenDialog.FileName);
+                if (radSources.IsChecked ?? false)
+                    loadComboBox(Entity.Sources);
                 updateStatus(string.Format("Read sources from file {0}.", xmlFileOpenDialog.FileName));
+                //if (radSources.IsChecked ?? false)
+                    
             }
             else
                 updateStatus("Creation of Sources collection cancelled.");
@@ -53,7 +63,8 @@ namespace RRWpfUi
             if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
             {
                 rrController.ReadReconsFromXMLFile(xmlFileOpenDialog.FileName);
-                loadCmbChooseRecon();
+                if (radRecons.IsChecked ?? false)
+                    loadComboBox(Entity.Recons);
                 updateStatus(string.Format("Loaded recons from file {0}", xmlFileOpenDialog.FileName));
             }
             else
@@ -62,23 +73,41 @@ namespace RRWpfUi
             checkReadyToRun();
         }
 
-        private void loadCmbChooseRecon()
+        /// <summary>
+        /// Load the combo box with either a list of recon reports available for edting
+        /// or add entries for allowing to edit Sources info or not
+        /// </summary>
+        /// <param name="entity"></param>
+        private void loadComboBox(Entity entity)
         {
+            if (cmbChooseItem != null)
+            {
+                var noEntityText = entity == Entity.Recons ? noReconText : noSourcesText;
+                var chooseEntityText = entity == Entity.Recons ? chooseReconText : chooseSourcesText;
+                int entityCount = 0;
+                if (entity == Entity.Recons && rrController.Recons != null)
+                    entityCount = rrController.Recons.ReconReports.Count;
+                else
+                    if (entity == Entity.Sources && rrController.Sources != null)
+                        entityCount = rrController.Sources.ConnectionStrings.Count;
 
-            if (rrController.Recons.ReconReports.Count == 0)
-            {
                 cmbChooseItem.Items.Clear();
-                cmbChooseItem.Items.Add(noReconText);
-                cmbChooseItem.SelectedItem = cmbChooseItem.Items[0];
-                cmbChooseItem.IsEnabled = false;
-            }
-            else
-            {
-                cmbChooseItem.Items.Clear();
-                cmbChooseItem.Items.Add(chooseReconText);
-                rrController.Recons.ReconReports.ForEach(recon => cmbChooseItem.Items.Add(recon.Name));
-                cmbChooseItem.SelectedItem = cmbChooseItem.Items[0];
-                cmbChooseItem.IsEnabled = true;
+                if (entityCount == 0)
+                {
+                    cmbChooseItem.Items.Add(noEntityText);
+                    cmbChooseItem.SelectedItem = cmbChooseItem.Items[0];
+                    cmbChooseItem.IsEnabled = false;
+                }
+                else
+                {
+                    cmbChooseItem.Items.Add(chooseEntityText);
+                    cmbChooseItem.SelectedItem = cmbChooseItem.Items[0];
+                    if (entity == Entity.Recons)
+                        rrController.Recons.ReconReports.ForEach(recon => cmbChooseItem.Items.Add(recon.Name));
+                    else
+                        cmbChooseItem.Items.Add("Edit sources");
+                    cmbChooseItem.IsEnabled = true;
+                }
             }
         }
 
@@ -258,24 +287,38 @@ namespace RRWpfUi
 
         private void btnSaveEdits_Click(object sender, RoutedEventArgs e)
         {
-            var fileSaveDialog = getFileSaveDialog("Save recons to file");
-            fileSaveDialog.Title = "Save Recons";
+            Entity entityBeingSaved;
+            if (radRecons.IsChecked ?? false)
+                entityBeingSaved = Entity.Recons;
+            else
+                entityBeingSaved = Entity.Sources;
+            var entityText = entityBeingSaved.ToString();
+
+            var fileSaveDialog = getFileSaveDialog(string.Format("Save {0} to file", entityText));
+            fileSaveDialog.Title = entityText;
             var xmlFile = fileSaveDialog.ShowDialog();
 
             try
             {
                 if (xmlFile != System.Windows.Forms.DialogResult.Cancel)
                 {
-                    rrController.WriteReconsToXmlFile(fileSaveDialog.FileName);
-                    updateStatus(string.Format("Wrote recons to file {0}", fileSaveDialog.FileName));
+                    if (entityBeingSaved == Entity.Recons)
+                    {
+                        rrController.WriteReconsToXmlFile(fileSaveDialog.FileName);
+                    }
+                    else
+                    {
+                        rrController.WriteSourcesToXmlFile(fileSaveDialog.FileName);
+                    }
+                    updateStatus(string.Format("Wrote {0} to file {1}", entityText, fileSaveDialog.FileName));
                 }
                 else
-                    updateStatus("Creation of Recons XML file cancelled.");
+                    updateStatus(string.Format("Creation of {0} XML file cancelled.", entityBeingSaved));
                 checkReadyToRun();
             }
             catch (Exception ex)
             {
-                updateStatus(string.Format("Unable to save changes to file {0}: {1}", xmlFile, rrController.GetFullErrorMessage(ex)));
+                updateStatus(string.Format("Unable to save {0} changes to file {1}: {2}", entityText, xmlFile, rrController.GetFullErrorMessage(ex)));
             }
         }
 
@@ -287,14 +330,15 @@ namespace RRWpfUi
                 {
                     rrPropertyGrid.Visibility = Visibility.Hidden;
                     enableEditingControls(false);
-                    btnSaveEdits.IsEnabled = false;
                 }
                 else
                 {
                     rrPropertyGrid.Visibility = Visibility.Visible;
-                    rrPropertyGrid.SelectedObject = rrController.Recons.ReconReports.Find(rr => rr.Name == cmbChooseItem.SelectedItem.ToString());
+                    if (radRecons.IsChecked ?? false)
+                        rrPropertyGrid.SelectedObject = rrController.Recons.ReconReports.Find(rr => rr.Name == cmbChooseItem.SelectedItem.ToString());
+                    else
+                        rrPropertyGrid.SelectedObject = rrController.Sources;
                     enableEditingControls(true);
-                    btnSaveEdits.IsEnabled = true;
                 }
             }
         }
@@ -319,6 +363,16 @@ namespace RRWpfUi
         private void saveImage_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
         {
             updateStatus("Ping...");
+        }
+
+        private void radEntity_Checked(object sender, RoutedEventArgs e)
+        {
+            Entity entityToLoad;
+            if (radRecons.IsChecked ?? false)
+                entityToLoad = Entity.Recons;
+            else
+                entityToLoad = Entity.Sources;
+            loadComboBox(entityToLoad);
         }
     }
 }

@@ -104,7 +104,12 @@ namespace ReconRunner.Controller
         {
             getNewFileService().WriteReconsToXMLFile(recons, fileName);
         }
-        
+
+        public void WriteSourcesToXmlFile(string fileName)
+        {
+            getNewFileService().WriteSourcesToXMLFile(sources, fileName);
+        }
+
         /// <summary>
         /// Read in information for all the recons to be done from the specified xml file.  Note that 
         /// each recon query will need a corresponding entry in App.Config that specifies the actual
