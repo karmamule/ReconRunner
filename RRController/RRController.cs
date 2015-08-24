@@ -190,7 +190,7 @@ namespace ReconRunner.Controller
         /// <returns>A string with information on the run (success/failure/reports run/etc.)</returns>
         public void RunRecons(string excelFileName)
         {
-            if (sources.Queries.Count == 0 || recons.ReconReports.Count == 0)
+            if (sources.Queries.Count == 0 || recons.ReconReports.Count == 0) 
                 throw new Exception("Either sources or recons not specified");
             rrDataService.Sources = sources;
             rrDataService.Recons = recons;
