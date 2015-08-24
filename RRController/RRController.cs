@@ -1183,6 +1183,11 @@ namespace ReconRunner.Controller
             return rrFileService;
         }
 
+        public ReconReport CopyReconReport(ReconReport reconReport)
+        {
+            return getNewFileService().CopyReconReport(reconReport);
+        }
+
         #endregion Utilities
     }
 }

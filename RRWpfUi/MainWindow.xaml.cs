@@ -375,11 +375,13 @@ namespace RRWpfUi
                     {
                         rrPropertyGrid.SelectedObject = rrController.Recons.ReconReports.Find(rr => rr.Name == cmbChooseItem.SelectedItem.ToString());
                         enableEditingControls(Entity.Recons);
+                        updateStatus(string.Format("Recon report '{0}' now editable.", cmbChooseItem.SelectedValue));
                     }
                     else
                     {
                         rrPropertyGrid.SelectedObject = rrController.Sources;
                         enableEditingControls(Entity.Sources);
+                        updateStatus(string.Format("Sources are now editable."));
                     }
                 }
             }
@@ -405,11 +407,25 @@ namespace RRWpfUi
 
         private void btnDeleteItem_Click(object sender, RoutedEventArgs e)
         {
+            var currentReconName = cmbChooseItem.SelectedValue.ToString();
+            rrController.Recons.ReconReports.RemoveAll(reconReport => reconReport.Name == currentReconName);
+            rrController.Sources = rrController.Sources;
+            loadComboBox(Entity.Recons);
+            cmbChooseItem.SelectedIndex = 0;
+            updateStatus(string.Format("Recon report {0} has been removed.", currentReconName));
         }
 
         private void btnCopyItem_Click(object sender, RoutedEventArgs e)
         {
-
+            var currentReconName = cmbChooseItem.SelectedValue.ToString();
+            var newReconReport = rrController.CopyReconReport(rrController.Recons.ReconReports.Find(reconReport => reconReport.Name == currentReconName));
+            newReconReport.Name = newReconReport.Name += " (COPY)";
+            newReconReport.TabLabel = newReconReport.TabLabel + " (COPY)";
+            rrController.ReconReports.Add(newReconReport);
+            updateStatus(string.Format("New recon report {0} created.", newReconReport.Name));
+            rrController.Recons = rrController.Recons;
+            loadComboBox(Entity.Recons);
+            cmbChooseItem.SelectedIndex = cmbChooseItem.Items.Count - 1;
         }
 
         private void radEntity_Checked(object sender, RoutedEventArgs e)
