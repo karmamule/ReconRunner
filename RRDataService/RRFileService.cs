@@ -486,6 +486,22 @@ namespace ReconRunner.Model
             writer.Close();
         }
 
+        /// <summary>
+        /// Use to make a deep copy of a ReconReport
+        /// </summary>
+        /// <param name="reconReport">A ReconReport object to be copied</param>
+        /// <returns>A deep copy of the ReconReport object provided</returns>
+        public ReconReport CopyReconReport(ReconReport reconReport)
+        {
+            using (MemoryStream stream = new MemoryStream())
+            {
+                XmlSerializer serializer = new XmlSerializer(typeof(ReconReport));
+                serializer.Serialize(stream, reconReport);
+                stream.Position = 0;
+                return (ReconReport)serializer.Deserialize(stream);
+            }
+        }
+
         public Recons ReadReconsFromXMLFile(string fileName)
         {
             XmlSerializer serializer = new XmlSerializer(typeof(Recons));
