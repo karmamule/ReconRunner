@@ -13,7 +13,9 @@ namespace ReconRunner.Model
         CompletedWithWarning,   // The request completed but with one or more cautionary messages
         Error,                  // An error occured, but processing should continue
         FatalError,             // The request did not complete and any further processing should stop
-        Information             // This is an informational message and not a status update
+        Information,            // This is an informational message and not a status update      
+        DataInvalid,            // Recon and/or source data is invalid
+        DataValid               // Recon and sources data is now valid
     }
 
     public delegate void ActionStatusEventHandler(object sender, ActionStatusEventArgs e);

@@ -16,7 +16,7 @@ namespace RRWpfUi
     {
         enum Entity
         {
-            Sources, Recons
+            Sources, Recons, None
         }
         private string cr = "\r\n";
         private string noReconText = "No recon reports loaded";
@@ -31,7 +31,8 @@ namespace RRWpfUi
             InitializeComponent();
             lblVersion.Content = getVersionText();
             rrController.ActionStatusEvent += new ActionStatusEventHandler(handleActionStatus);
-            enableEditingControls(false);
+            enableEditingControls(Entity.None);
+            allowReports(false);
         }
 
         #region Button Click Methods
@@ -47,12 +48,11 @@ namespace RRWpfUi
                     loadComboBox(Entity.Sources);
                 updateStatus(string.Format("Read sources from file {0}.", xmlFileOpenDialog.FileName));
                 //if (radSources.IsChecked ?? false)
-                    
             }
             else
                 updateStatus("Creation of Sources collection cancelled.");
 
-            checkReadyToRun();
+            //checkReadyToRun();
         }
 
         private void btnLoadRecons_Click(object sender, RoutedEventArgs e)
@@ -70,7 +70,7 @@ namespace RRWpfUi
             else
                 updateStatus("Creation of Recon collection cancelled.");
 
-            checkReadyToRun();
+            //checkReadyToRun();
         }
 
         /// <summary>
@@ -111,6 +111,7 @@ namespace RRWpfUi
             }
         }
 
+        /*
         private void checkReadyToRun()
         {
             btnRunRecons.IsEnabled = rrController.ReadyToRun();
@@ -118,34 +119,57 @@ namespace RRWpfUi
             if (btnRunRecons.IsEnabled)
                 updateStatus("No validation errors. Ready to run recons.");
         }
+        */
+
+        private void allowReports(bool allowReports)
+        {
+            btnRunRecons.IsEnabled = allowReports;
+            btnValidate.IsEnabled = !allowReports;
+        }
 
         private void btnRunRecons_Click(object sender, RoutedEventArgs e)
         {
-            try
+            if (!rrController.ReadyToRun())
             {
-                var fileSaveDialog = getFileSaveDialog("Save recon results to spreadsheet");
-                fileSaveDialog.DefaultExt = "xls";
-                fileSaveDialog.Filter = "Excel Files|*.xlsx|All files|*.*";
-                DialogResult excelFile = fileSaveDialog.ShowDialog();
-
-                if (excelFile != System.Windows.Forms.DialogResult.Cancel)
-                {
-                    updateStatus(string.Format("Processing recon reports and creating {0}.", fileSaveDialog.FileName));
-                    Task.Factory.StartNew(() =>
-                    {
-                        rrController.RunRecons(fileSaveDialog.FileName);
-                    });
-                    updateStatus("Done.");
-                }
-                else
-                {
-                    updateStatus("Creation of Recon report Excel file cancelled.");
-                }
+                allowReports(false);
+                updateStatus("Data is no longer valid. Did you just change something?");
+                reportValidationIssues();
             }
-            catch (Exception ex)
+            else
             {
-                var fullErrorMessage = rrController.GetFullErrorMessage(ex);
-                updateStatus(string.Format("Error while running recons: {0}", fullErrorMessage));
+                try
+                {
+                    var fileSaveDialog = getFileSaveDialog("Save recon results to spreadsheet");
+                    fileSaveDialog.DefaultExt = "xls";
+                    fileSaveDialog.Filter = "Excel Files|*.xlsx|All files|*.*";
+                    DialogResult excelFile = fileSaveDialog.ShowDialog();
+
+                    if (excelFile != System.Windows.Forms.DialogResult.Cancel)
+                    {
+                        updateStatus(string.Format("Processing recon reports and creating {0}.", fileSaveDialog.FileName));
+                        Task.Factory.StartNew(() =>
+                        {
+                            try
+                            {
+                                rrController.RunRecons(fileSaveDialog.FileName);
+                            }
+                            catch (Exception ex)
+                            {
+                                string.Format("Problem while running recons: {0}", rrController.GetFullErrorMessage(ex));
+                            }
+                        });
+                        updateStatus("Done.");
+                    }
+                    else
+                    {
+                        updateStatus("Creation of Recon report Excel file cancelled.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var fullErrorMessage = rrController.GetFullErrorMessage(ex);
+                    updateStatus(string.Format("Error while running recons: {0}", fullErrorMessage));
+                }
             }
         }
 
@@ -264,11 +288,23 @@ namespace RRWpfUi
             // Use Dispatcher.Invoke so UI responds and shows message immediately
             Dispatcher.Invoke(new Action(() =>
             {
-                if (e.State == RequestState.Succeeded || e.State == RequestState.Information)
-                    updateStatus(e.Message);
-                else
-                    // Something other than success status, so show the status as well as the message
-                    updateStatus(string.Format("{0} Status: {1}", e.State.ToString(), e.Message));
+                // If a message regarding data validity, act accordingly. Otherwise just show it to user
+                switch (e.State)
+                {
+                    case RequestState.DataInvalid:
+                        allowReports(false);
+                        break;
+                    case RequestState.DataValid:
+                        allowReports(true);
+                        break;
+                    case RequestState.Succeeded:
+                    case RequestState.Information:
+                        updateStatus(e.Message);
+                        break;
+                    default:
+                        updateStatus(string.Format("{0} Status: {1}", e.State.ToString(), e.Message));
+                        break;
+                }
             }));
         }
 
@@ -285,7 +321,7 @@ namespace RRWpfUi
             txtStatus.Text = string.Empty;
         }
 
-        private void btnSaveEdits_Click(object sender, RoutedEventArgs e)
+        private void btnSaveToFile_Click(object sender, RoutedEventArgs e)
         {
             Entity entityBeingSaved;
             if (radRecons.IsChecked ?? false)
@@ -314,13 +350,14 @@ namespace RRWpfUi
                 }
                 else
                     updateStatus(string.Format("Creation of {0} XML file cancelled.", entityBeingSaved));
-                checkReadyToRun();
+                //checkReadyToRun();
             }
             catch (Exception ex)
             {
                 updateStatus(string.Format("Unable to save {0} changes to file {1}: {2}", entityText, xmlFile, rrController.GetFullErrorMessage(ex)));
             }
         }
+
 
         private void cmbChooseRecon_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
@@ -329,40 +366,50 @@ namespace RRWpfUi
                 if (cmbChooseItem.Items.Count == 0 || cmbChooseItem.SelectedIndex == 0)
                 {
                     rrPropertyGrid.Visibility = Visibility.Hidden;
-                    enableEditingControls(false);
+                    enableEditingControls(Entity.None);
                 }
                 else
                 {
                     rrPropertyGrid.Visibility = Visibility.Visible;
                     if (radRecons.IsChecked ?? false)
+                    {
                         rrPropertyGrid.SelectedObject = rrController.Recons.ReconReports.Find(rr => rr.Name == cmbChooseItem.SelectedItem.ToString());
+                        enableEditingControls(Entity.Recons);
+                    }
                     else
+                    {
                         rrPropertyGrid.SelectedObject = rrController.Sources;
-                    enableEditingControls(true);
+                        enableEditingControls(Entity.Sources);
+                    }
                 }
             }
         }
 
-        private void enableEditingControls(bool isEnabled)
+        private void enableEditingControls(Entity entitySelected)
         {
-            btnSaveEdits.IsEnabled = isEnabled;
-            btnDeleteItem.IsEnabled = isEnabled;
-            btnCopyItem.IsEnabled = isEnabled;
+            btnSaveToFile.IsEnabled = false;
+            btnDeleteItem.IsEnabled = false;
+            btnCopyItem.IsEnabled = false;
+            switch (entitySelected)
+            {
+                case Entity.Recons:
+                    btnSaveToFile.IsEnabled = true;
+                    btnDeleteItem.IsEnabled = true;
+                    btnCopyItem.IsEnabled = true;
+                    break;
+                case Entity.Sources:
+                    btnSaveToFile.IsEnabled = true;
+                    break;
+            }
         }
 
         private void btnDeleteItem_Click(object sender, RoutedEventArgs e)
         {
-
         }
 
         private void btnCopyItem_Click(object sender, RoutedEventArgs e)
         {
 
-        }
-
-        private void saveImage_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
-        {
-            updateStatus("Ping...");
         }
 
         private void radEntity_Checked(object sender, RoutedEventArgs e)
@@ -373,6 +420,11 @@ namespace RRWpfUi
             else
                 entityToLoad = Entity.Sources;
             loadComboBox(entityToLoad);
+        }
+
+        private void rrPropertyGrid_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            rrController.Sources = rrController.Sources;
         }
     }
 }

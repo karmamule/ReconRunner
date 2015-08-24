@@ -17,6 +17,8 @@ namespace ReconRunner.Controller
 
         private RRDataService rrDataService = RRDataService.Instance;
         private RRExcelService rrExcelService = RRExcelService.Instance;
+        private string firstQueryLabel;
+        private string secondQueryLabel;
         public event ActionStatusEventHandler ActionStatusEvent;
         string pipePlaceholderRegex = @"\|(\w+)\|";
 
@@ -36,13 +38,36 @@ namespace ReconRunner.Controller
         public Recons Recons
         {
             get { return recons; }
-            set { recons = value; }
+            set {
+                    recons = value;
+                    if (!IsDataValid)
+                        sendActionStatus(this, RequestState.DataInvalid, "Data is not currently valid. Use GetValidationErrors() for details", false);
+                    else
+                        sendActionStatus(this, RequestState.DataValid, "Sources and recons are valid.", false);
+                }
         }
         private Sources sources = new Sources();
         public Sources Sources
         {
             get { return sources; }
-            set { sources = value; }
+            set {
+                    sources = value;
+                    if (!IsDataValid)
+                        sendActionStatus(this, RequestState.DataInvalid, "Data is not currently valid. Use GetValidationErrors() for details", false);
+                    else
+                        sendActionStatus(this, RequestState.DataValid, "Sources and recons are valid.", false);
+            }
+        }
+
+        public bool IsDataValid
+        {
+            get
+            {
+                if (validateRecons().Count > 0 || validateSources().Count > 0)
+                    return false;
+                else
+                    return true;
+            }
         }
 
         public List<ReconReport> ReconReports
@@ -120,12 +145,12 @@ namespace ReconRunner.Controller
         {
             try
             {
-                recons = getNewFileService().ReadReconsFromXMLFile(fileName);
+                Recons = getNewFileService().ReadReconsFromXMLFile(fileName);
                 sendActionStatus(this, RequestState.Succeeded, "Read recons from XML file.", false);
             }
             catch (Exception e)
             {
-                recons = null;
+                Recons = null;
                 sendActionStatus(this, RequestState.Error, string.Format("Failed to read recons from XML file: {0}.", GetFullErrorMessage(e)), false);            
             }
         }
@@ -144,12 +169,12 @@ namespace ReconRunner.Controller
         {
             try
             {
-                sources = getNewFileService().ReadSourcesFromXMLFile(fileName);
+                Sources = getNewFileService().ReadSourcesFromXMLFile(fileName);
                 sendActionStatus(this, RequestState.Succeeded, "Read sources from XML file.", false);
             }
             catch (Exception e)
             {
-                sources = null;
+                Sources = null;
                 sendActionStatus(this, RequestState.Error, string.Format("Failed to read sources from XML file: {0}.", GetFullErrorMessage(e)), false);
             }
         }
@@ -199,9 +224,18 @@ namespace ReconRunner.Controller
             }
             catch(Exception e)
             {
-                rrDataService.CloseConnections();
-                rrExcelService.CloseExcel();
-                throw new ApplicationException(string.Format("Error while running recon: {0}. Closed connections and Excel.", GetFullErrorMessage(e)));
+                Exception originalException = e;
+                try
+                {
+                    rrDataService.CloseConnections();
+                    rrExcelService.CloseExcel();
+                }
+                catch (Exception newEx)
+                {
+                    string fullErrorMessage = string.Format("While cleaning up after error {0} ran into error {1}. Connections and/or Excel may not have closed successfully.", GetFullErrorMessage(originalException), GetFullErrorMessage(newEx));
+                    sendActionStatus(this, RequestState.FatalError, fullErrorMessage, false);
+                }
+                sendActionStatus(this, RequestState.FatalError, string.Format("Error while running recon: {0}. Successfully closed connections and Excel.", GetFullErrorMessage(e)), false);
             }
             rrDataService.CloseConnections();
             sendActionStatus(this, RequestState.Information, "Closed all connections.", false);
@@ -312,12 +346,13 @@ namespace ReconRunner.Controller
             CellStyle currStyle = CellStyle.LightBlue;
             int orphanCounter = 0;
             string counterText;
+            setReconQueryLabels(recon);
             // Start the section with a label
             excelRow = new Dictionary<string, Cell>();
             excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
-            excelRow.Add("B", new Cell(recon.FirstQueryLabel, CellStyle.Bold));
+            excelRow.Add("B", new Cell(firstQueryLabel, CellStyle.Bold));
             excelRow.Add("C", new Cell("Without a Match in", CellStyle.Bold));
-            excelRow.Add("D", new Cell(recon.SecondQueryLabel, CellStyle.Bold));
+            excelRow.Add("D", new Cell(secondQueryLabel, CellStyle.Bold));
             rrExcelService.AddRow(excelRow);
             // Now write out the common columns at the left of each section
             writeCommonHeaders(2, recon.Columns, true, true);
@@ -357,13 +392,13 @@ namespace ReconRunner.Controller
             CellStyle currStyle = CellStyle.LightBlue;
             int orphanCounter = 0;
             string counterText;
-
+            setReconQueryLabels(recon);
             // Start the section with a label
             excelRow = new Dictionary<string, Cell>();
             excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
-            excelRow.Add("B", new Cell(recon.SecondQueryLabel, CellStyle.Bold));
+            excelRow.Add("B", new Cell(secondQueryLabel, CellStyle.Bold));
             excelRow.Add("C", new Cell("Without a Match in", CellStyle.Bold));
-            excelRow.Add("D", new Cell(recon.FirstQueryLabel, CellStyle.Bold));
+            excelRow.Add("D", new Cell(firstQueryLabel, CellStyle.Bold));
             rrExcelService.AddRow(excelRow);
             // Now write out the common columns at the left of each section
 
@@ -425,16 +460,16 @@ namespace ReconRunner.Controller
             int numDifferencesFound = 0;
             int numQueries = recon.SecondQueryName == "" ? 1 : 2;
             string counterText;
-
+            setReconQueryLabels(recon);
             // Start the section with a label if 2-query recon
             if (recon.SecondQueryName != "")
             {
                 excelRow = new Dictionary<string, Cell>();
                 excelRow.Add("A", new Cell("Rows in ", CellStyle.Bold));
-                excelRow.Add("B", new Cell(recon.FirstQueryLabel, CellStyle.Bold));
+                excelRow.Add("B", new Cell(firstQueryLabel, CellStyle.Bold));
                 excelRow.Add("C", new Cell("that have one or more", CellStyle.Bold));
                 excelRow.Add("D", new Cell("differences compared to", CellStyle.Bold));
-                excelRow.Add("E", new Cell(recon.SecondQueryLabel, CellStyle.Bold));
+                excelRow.Add("E", new Cell(secondQueryLabel, CellStyle.Bold));
                 rrExcelService.AddRow(excelRow);
             }
             // Now write out the common columns at the left of each section
@@ -839,6 +874,20 @@ namespace ReconRunner.Controller
             rrExcelService.AddBlankRow();
         }
 
+        private void setReconQueryLabels(ReconReport recon)
+        {
+            if (recon.FirstQueryName != recon.SecondQueryName)
+            {
+                firstQueryLabel = recon.FirstQueryName;
+                secondQueryLabel = recon.SecondQueryName;
+            }
+            else
+            {
+                firstQueryLabel = recon.FirstQueryName + " (1)";
+                secondQueryLabel = recon.SecondQueryName + " (2)";
+            }
+        }
+
         #region Validation
         public bool ReadyToRun()
         {
@@ -869,7 +918,7 @@ namespace ReconRunner.Controller
             var sourcesErrors = new List<string>();
 
             // First check if we have a possibly-complete set of info to check.  If not, don't go any further.
-            if (sources.ConnStringTemplates.Count == 0 || sources.ConnectionStrings.Count == 0 || sources.Queries.Count == 0)
+            if (sources == null || sources.ConnStringTemplates.Count == 0 || sources.ConnectionStrings.Count == 0 || sources.Queries.Count == 0)
             {
                 sourcesErrors.Add("Sources: Incomplete information. Make sure at least one ConnectionStringTemplate, ConnectionString, and Query exists.");
                 return sourcesErrors;
@@ -932,122 +981,124 @@ namespace ReconRunner.Controller
         {
             var reconsErrors = new List<string>();
             // First check if we have a possibly-complete set of info to check.  If not, don't go any further.
-            if (recons.ReconReports.Count() == 0)
+            if (recons == null || recons.ReconReports.Count() == 0)
             {
                 reconsErrors.Add("Recons: Not loaded yet. A recon XML file w/at least one recon specified must be loaded.");
                 return reconsErrors;
             }
-            else
+            if (sources == null || sources.ConnectionStrings.Count() == 0)
             {
-                var queryNames = (from query in sources.Queries select query.Name).ToList();
-                // Duplicate recon names
-                var dupNames = getDuplicateEntries((from recon in recons.ReconReports select recon.Name).ToList());
-                if (dupNames != string.Empty)
-                    reconsErrors.Add(string.Format("Recons: Duplicate recon report name(s) found: {0}", dupNames));
-                // Duplicate tab labels
-                dupNames = getDuplicateEntries((from recon in recons.ReconReports select recon.TabLabel).ToList());
-                if (dupNames != string.Empty)
-                    reconsErrors.Add(string.Format("Recons: Duplicate recon tab label(s) found: {0}", dupNames));
-                List<string> allQueryPlaceholders = new List<string>();
-                // Test for any query-specific issues for the recon
-                recons.ReconReports.ForEach(recon =>
+                reconsErrors.Add("Sources not loaded yet.");
+                return reconsErrors;
+            }
+            var queryNames = (from query in sources.Queries select query.Name).ToList();
+            // Duplicate recon names
+            var dupNames = getDuplicateEntries((from recon in recons.ReconReports select recon.Name).ToList());
+            if (dupNames != string.Empty)
+                reconsErrors.Add(string.Format("Recons: Duplicate recon report name(s) found: {0}", dupNames));
+            // Duplicate tab labels
+            dupNames = getDuplicateEntries((from recon in recons.ReconReports select recon.TabLabel).ToList());
+            if (dupNames != string.Empty)
+                reconsErrors.Add(string.Format("Recons: Duplicate recon tab label(s) found: {0}", dupNames));
+            List<string> allQueryPlaceholders = new List<string>();
+            // Test for any query-specific issues for the recon
+            recons.ReconReports.ForEach(recon =>
+            {
+                List<string> reconQueryNames = new List<string> { recon.FirstQueryName, recon.SecondQueryName };
+                for (int queryNum = 1; queryNum <= 2; queryNum++)
                 {
-                    List<string> reconQueryNames = new List<string> { recon.FirstQueryName, recon.SecondQueryName };
-                    for (int queryNum = 1; queryNum <= 2; queryNum++)
+                    string reconQueryName = reconQueryNames[queryNum - 1];
+                    // If query name is not empty, check query exists in source. If that's true continue on to check all related placeholders are given a value
+                    if (reconQueryName != string.Empty)
                     {
-                        string reconQueryName = reconQueryNames[queryNum - 1];
-                        // If query name is not empty, check query exists in source. If that's true continue on to check all related placeholders are given a value
-                        if (reconQueryName != string.Empty)
+                        if (!queryNames.Contains(reconQueryName))
+                            reconsErrors.Add(string.Format("Recons: the recon {0} refers to a non-existent query called {1}", recon.Name, reconQueryName));
+                        else
                         {
-                            if (!queryNames.Contains(reconQueryName))
-                                reconsErrors.Add(string.Format("Recons: the recon {0} refers to a non-existent query called {1}", recon.Name, reconQueryName));
-                            else
+                            var querySql = sources.Queries.Find(query => query.Name == reconQueryName).SQL.Value;
+                            var queryPlaceholders = (from Match match in Regex.Matches(querySql.ToString(), pipePlaceholderRegex)
+                                                        select match.Groups[1].Value).ToList();
+                            allQueryPlaceholders = allQueryPlaceholders.Union(queryPlaceholders).ToList();
+                            var queryVariableNames = (from queryVariable in recon.QueryVariables
+                                                        where !queryVariable.QuerySpecific || (queryVariable.QueryNumber == queryNum)
+                                                        select queryVariable.SubName).ToList();
+                            queryPlaceholders.ForEach(placeholder =>
                             {
-                                var querySql = sources.Queries.Find(query => query.Name == reconQueryName).SQL.Value;
-                                var queryPlaceholders = (from Match match in Regex.Matches(querySql.ToString(), pipePlaceholderRegex)
-                                                         select match.Groups[1].Value).ToList();
-                                allQueryPlaceholders = allQueryPlaceholders.Union(queryPlaceholders).ToList();
-                                var queryVariableNames = (from queryVariable in recon.QueryVariables
-                                                          where !queryVariable.QuerySpecific || (queryVariable.QueryNumber == queryNum)
-                                                          select queryVariable.SubName).ToList();
-                                queryPlaceholders.ForEach(placeholder =>
-                                {
-                                    if (!queryVariableNames.Contains(placeholder))
-                                        reconsErrors.Add(string.Format("Recons: The recon {0} does not supply a placeholder value for {1} in query {2}", recon.Name, placeholder, reconQueryName));
-                                });
-                                // Make sure all variables listed as specific to the query have a corresponding placeholder in the related query
-                                var querySpecificVarNames = (from queryVariable in recon.QueryVariables
-                                                             where queryVariable.QueryNumber == queryNum
-                                                             select queryVariable.SubName).ToList();
-                                querySpecificVarNames.ForEach(queryVarName =>
-                                {
-                                    if (!queryPlaceholders.Contains(queryVarName))
-                                        reconsErrors.Add(string.Format("Recons: The recon {0} has a variable {1} for the query {2} with no corresponding placeholder in the query's sql", recon.Name, queryVarName, reconQueryName));
-                                });
-                                // No duplicate variable names for first query
-                                dupNames = getDuplicateEntries(queryVariableNames);
-                                if (dupNames != string.Empty)
-                                    reconsErrors.Add(string.Format("Recons: For recon {0} duplicate query variable(s) found {1} for first query {2}", recon.Name, dupNames, recon.FirstQueryName));
-                            };
+                                if (!queryVariableNames.Contains(placeholder))
+                                    reconsErrors.Add(string.Format("Recons: The recon {0} does not supply a placeholder value for {1} in query {2}", recon.Name, placeholder, reconQueryName));
+                            });
+                            // Make sure all variables listed as specific to the query have a corresponding placeholder in the related query
+                            var querySpecificVarNames = (from queryVariable in recon.QueryVariables
+                                                            where queryVariable.QueryNumber == queryNum
+                                                            select queryVariable.SubName).ToList();
+                            querySpecificVarNames.ForEach(queryVarName =>
+                            {
+                                if (!queryPlaceholders.Contains(queryVarName))
+                                    reconsErrors.Add(string.Format("Recons: The recon {0} has a variable {1} for the query {2} with no corresponding placeholder in the query's sql", recon.Name, queryVarName, reconQueryName));
+                            });
+                            // No duplicate variable names for first query
+                            dupNames = getDuplicateEntries(queryVariableNames);
+                            if (dupNames != string.Empty)
+                                reconsErrors.Add(string.Format("Recons: For recon {0} duplicate query variable(s) found {1} for first query {2}", recon.Name, dupNames, recon.FirstQueryName));
                         };
                     };
-                    // Any non-query specific variables that are not used by either query
-                    var nonSpecificVarNames = (from queryVariable in recon.QueryVariables
-                                               where !queryVariable.QuerySpecific
-                                               select queryVariable.SubName).ToList();
-                    nonSpecificVarNames.ForEach(queryVarName =>
-                    {
-                        if (!allQueryPlaceholders.Contains(queryVarName))
-                            reconsErrors.Add(string.Format("Recons: The recon {0} has a non-query specific variable {1} with no corresponding placeholder any related SQL", recon.Name, queryVarName));
-                    });
-
-                    // Any column with non-zero tolerance must be a number and CheckDataMatch is true
-                    var invalidColumns = (from col in recon.Columns
-                                          where col.Tolerance != 0 && (col.Type != ColumnType.number || !col.CheckDataMatch)
-                                          select col.Label).ToList();
-                    if (invalidColumns.Count() > 0)
-                    {
-                        var invalidColNames = string.Join(",", invalidColumns);
-                        reconsErrors.Add(string.Format("Recons: The columns {0} are invalid because only number columns with CheckDataMatch of true can have a non-zero tolerance. ", invalidColNames));
-                    }
-
-                    // Any variables that are QuerySpecific but don't have QueryNumber of 1 or 2
-                    var invalidQueryVariables = (from queryVariable in recon.QueryVariables
-                                                 where queryVariable.QuerySpecific && queryVariable.QueryNumber != 1 && queryVariable.QueryNumber != 2
-                                                 select queryVariable.SubName).ToList();
-                    if (invalidQueryVariables.Count() > 0)
-                    {
-                        var invalidVarNames = string.Join(",", invalidQueryVariables);
-                        reconsErrors.Add(string.Format("Recons: For recon {0} the query variable(s) {1} are invalid because marked query specific but have QueryNumber other than 1 or 2", recon.Name, invalidVarNames));
-                    }
-                    var identCols = (from col in recon.Columns
-                                     where col.IdentifyingColumn == true
-                                     select col.Label).ToList();
-                    var checkDataMatchCols = (from col in recon.Columns
-                                              where col.CheckDataMatch == true
-                                              select col.Label).ToList();
-                    if (recon.SecondQueryName == string.Empty)
-                    {
-                        if (identCols.Count() > 0)
-                        {
-                            var identColList = string.Join(",", identCols);
-                            reconsErrors.Add(string.Format("Recons: Recon {0} is a single-query recon but column(s) {1} are set as identifying column. ", recon.Name, identColList));
-                        }
-                        if (checkDataMatchCols.Count() > 0)
-                        {
-                            var dataMatchColList = string.Join(",", checkDataMatchCols);
-                        reconsErrors.Add(string.Format("Recons: Recon {0} is a single-recon but column(s) {1} are set as needing to check if data matches between 2 queries.", recon.Name, dataMatchColList));
-                        }                         
-                    }
-                    else
-                    {
-                        // Tests specific to two-query recons
-                        if (identCols.Count == 0)
-                            reconsErrors.Add(string.Format("Recons: Recon {0} is a two-query recon but has no identifying columns to use to match rows between data sets.", recon.Name));
-                        // Note: it's ok to have a two-query recon with no checkdatamatch columns because the  purpose of the recon may be only to identify orphans.
-                    }
+                };
+                // Any non-query specific variables that are not used by either query
+                var nonSpecificVarNames = (from queryVariable in recon.QueryVariables
+                                            where !queryVariable.QuerySpecific
+                                            select queryVariable.SubName).ToList();
+                nonSpecificVarNames.ForEach(queryVarName =>
+                {
+                    if (!allQueryPlaceholders.Contains(queryVarName))
+                        reconsErrors.Add(string.Format("Recons: The recon {0} has a non-query specific variable {1} with no corresponding placeholder any related SQL", recon.Name, queryVarName));
                 });
-            } 
+
+                // Any column with non-zero tolerance must be a number and CheckDataMatch is true
+                var invalidColumns = (from col in recon.Columns
+                                        where col.Tolerance != 0 && (col.Type != ColumnType.number || !col.CheckDataMatch)
+                                        select col.Label).ToList();
+                if (invalidColumns.Count() > 0)
+                {
+                    var invalidColNames = string.Join(",", invalidColumns);
+                    reconsErrors.Add(string.Format("Recons: The columns {0} are invalid because only number columns with CheckDataMatch of true can have a non-zero tolerance. ", invalidColNames));
+                }
+
+                // Any variables that are QuerySpecific but don't have QueryNumber of 1 or 2
+                var invalidQueryVariables = (from queryVariable in recon.QueryVariables
+                                                where queryVariable.QuerySpecific && queryVariable.QueryNumber != 1 && queryVariable.QueryNumber != 2
+                                                select queryVariable.SubName).ToList();
+                if (invalidQueryVariables.Count() > 0)
+                {
+                    var invalidVarNames = string.Join(",", invalidQueryVariables);
+                    reconsErrors.Add(string.Format("Recons: For recon {0} the query variable(s) {1} are invalid because marked query specific but have QueryNumber other than 1 or 2", recon.Name, invalidVarNames));
+                }
+                var identCols = (from col in recon.Columns
+                                    where col.IdentifyingColumn == true
+                                    select col.Label).ToList();
+                var checkDataMatchCols = (from col in recon.Columns
+                                            where col.CheckDataMatch == true
+                                            select col.Label).ToList();
+                if (recon.SecondQueryName == string.Empty)
+                {
+                    if (identCols.Count() > 0)
+                    {
+                        var identColList = string.Join(",", identCols);
+                        reconsErrors.Add(string.Format("Recons: Recon {0} is a single-query recon but column(s) {1} are set as identifying column. ", recon.Name, identColList));
+                    }
+                    if (checkDataMatchCols.Count() > 0)
+                    {
+                        var dataMatchColList = string.Join(",", checkDataMatchCols);
+                    reconsErrors.Add(string.Format("Recons: Recon {0} is a single-recon but column(s) {1} are set as needing to check if data matches between 2 queries.", recon.Name, dataMatchColList));
+                    }                         
+                }
+                else
+                {
+                    // Tests specific to two-query recons
+                    if (identCols.Count == 0)
+                        reconsErrors.Add(string.Format("Recons: Recon {0} is a two-query recon but has no identifying columns to use to match rows between data sets.", recon.Name));
+                    // Note: it's ok to have a two-query recon with no checkdatamatch columns because the  purpose of the recon may be only to identify orphans.
+                }
+            });
             return reconsErrors;
         }
 

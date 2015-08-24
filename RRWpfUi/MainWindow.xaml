@@ -55,11 +55,15 @@
         <ScrollViewer x:Name="scrollViewStatus" CanContentScroll="false" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center" VerticalScrollBarVisibility="Auto" 
 			Width="520" 
 			HorizontalScrollBarVisibility="Hidden" Margin="6,5,10,2" RenderTransformOrigin="0.5,0.5" >
-            <TextBlock x:Name="txtStatus" Grid.Row="1" Grid.Column="0"
-				HorizontalAlignment="center" TextWrapping="Wrap" VerticalAlignment="Center" 
-				Height="{Binding ActualHeight, ConverterParameter=0.98, Converter={StaticResource PercentageConverter}, ElementName=scrollViewStatus}" 
-				Width="{Binding ActualWidth, ConverterParameter=0.98, Converter={StaticResource PercentageConverter}, ElementName=scrollViewStatus}" 
-				ToolTip="Information on file validation and/or recon run status will appear here." Background="White" Text="Welcome to ReconRunner!" Padding="5,5,5,5" />
+            <DockPanel Width="Auto" Height="Auto">
+            <Border BorderThickness="1" BorderBrush="Black"                    
+                     Width="{Binding Converter={StaticResource PercentageConverter},
+                     ElementName=scrollViewStatus, Path=ActualWidth, ConverterParameter=0.98}">
+                <TextBlock x:Name="txtStatus" Grid.Row="1" Grid.Column="0"
+				    TextWrapping="Wrap" VerticalAlignment="Stretch" 
+				    ToolTip="Information on file validation and/or recon run status will appear here." Background="White" Text="Welcome to ReconRunner!" Padding="5,5,5,5" />
+            </Border>
+            </DockPanel>
         </ScrollViewer>
         <Button x:Name="btnCreateSamples" Content="Create Sample Files" HorizontalAlignment="Left" Margin="387,5,0,0" VerticalAlignment="Top" Width="127" ToolTip="Click here to specify the Recons XML file to use" Grid.Row="2" Click="btnCreateSamples_Click" Height="22"/>
         <Button x:Name="btnValidate" Content="Validation Errors" HorizontalAlignment="Left" Margin="160,10,0,0" VerticalAlignment="Top" Width="127" ToolTip="Only enabled if there are validation issues" ToolTipService.ShowOnDisabled="True" Click="btnValidate_Click" RenderTransformOrigin="0.449,-0.864" Height="22"/>
@@ -69,7 +73,7 @@
         <!-- Eediting area -->
         <RadioButton x:Name="radRecons" Content="Recons" GroupName="SourcesOrRecons" IsChecked="True"  Grid.Column="1" HorizontalAlignment="Right" Margin="285,52, 150,0" VerticalAlignment="Top" Checked="radEntity_Checked"/>
         <RadioButton x:Name="radSources" Content="Sources" GroupName="SourcesOrRecons" IsChecked="False"  Grid.Column="1" HorizontalAlignment="right" Margin="285,75,146,0" VerticalAlignment="Top" Checked="radEntity_Checked"/>
-        <Button x:Name="btnSaveEdits" HorizontalAlignment="Right" Margin="0,53,0,0" VerticalAlignment="Top" Width="35" Height="35"  IsEnabled="False" ToolTip="Save to XML file" Style="{StaticResource ButtonEnabled}" ToolTipService.ShowOnDisabled="True" Click="btnSaveEdits_Click" Grid.Column="1" Grid.Row="0">
+        <Button x:Name="btnSaveToFile" HorizontalAlignment="Right" Margin="0,53,0,0" VerticalAlignment="Top" Width="35" Height="35"  IsEnabled="False" ToolTip="Save for Use" Style="{StaticResource ButtonEnabled}" ToolTipService.ShowOnDisabled="True" Click="btnSaveToFile_Click" Grid.Column="1" Grid.Row="0">
             <StackPanel Orientation="Horizontal">
                 <Image x:Name="saveImage" VerticalAlignment="Center" HorizontalAlignment="Center" Source="Resources/Save.png" Style="{StaticResource ImageEnabled}"/>
             </StackPanel>
@@ -84,8 +88,8 @@
                 <Image x:Name="deleteImage" VerticalAlignment="Center" HorizontalAlignment="Center" Source="Resources/Trash.png" Style="{StaticResource ImageEnabled}"/>
             </StackPanel>
         </Button>
-        <xctk:PropertyGrid x:Name="rrPropertyGrid" Visibility="Hidden" Padding="5" Margin="0,3,0,0" Background="#FFD2DBF3" Grid.Row="1" Grid.Column="1"
-            AutoGenerateProperties="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+        <xctk:PropertyGrid x:Name="rrPropertyGrid" Visibility="Hidden" Padding="5" Margin="6,5,10,2" Background="#FFD2DBF3" Grid.Row="1" Grid.Column="1"
+            AutoGenerateProperties="True" HorizontalAlignment="Stretch" MaxWidth="1080" VerticalAlignment="Stretch" PropertyChanged="rrPropertyGrid_PropertyChanged"  />
        
         <ComboBox Name="cmbChooseItem" Text="Choose a Recon to Edit" Height="22" Grid.Row="2" Grid.Column="1" IsEnabled="False" FontSize="10.667" ToolTip="Click to select a recon to edit below"  SelectionChanged="cmbChooseRecon_SelectionChanged">
             <ComboBoxItem IsSelected="True">No sources or recons loaded</ComboBoxItem>
