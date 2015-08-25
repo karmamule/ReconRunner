@@ -8,7 +8,7 @@
     <ProjectGuid>{7BCC759A-B30E-44E2-908B-ADC1805D23FF}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>RRController</RootNamespace>
+    <RootNamespace>ReconRunner.Controller</RootNamespace>
     <AssemblyName>RRController</AssemblyName>
     <SccProjectName>
     </SccProjectName>
@@ -23,7 +23,7 @@
     <OldToolsVersion>3.5</OldToolsVersion>
     <UpgradeBackupLocation>
     </UpgradeBackupLocation>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -46,6 +46,9 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>shell32_62999.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -54,6 +57,11 @@
   <ItemGroup>
     <Compile Include="DataReaderAdapter.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
     <Compile Include="RRController.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -76,6 +84,9 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="ReportXML\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="shell32_62999.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
