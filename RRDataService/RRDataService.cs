@@ -6,7 +6,6 @@ using System.Data;
 using System.Threading.Tasks;
 using System.Data.Common;
 using System.Data.OleDb;
-using Teradata.Client.Provider;
 
 namespace ReconRunner.Model
 {
@@ -100,8 +99,9 @@ namespace ReconRunner.Model
                     using (OleDbCommand command = new OleDbCommand(querySql, firstQueryConn))
                     using (OleDbDataAdapter adapter = new OleDbDataAdapter(command))
                         adapter.Fill(dataSet);
-                    return dataSet.Tables[0];
+
                 }
+                return dataSet.Tables[0];                /*
                 else
                 {
                     // It's a teradata connection
@@ -111,6 +111,7 @@ namespace ReconRunner.Model
                         adapter.Fill(dataSet);
                     return dataSet.Tables[0];
                 }
+                */
             }
             catch (Exception ex)
             {
@@ -176,8 +177,10 @@ namespace ReconRunner.Model
                 return;
             else
             {
-               var connString = buildConnectionString(connection.Name);
-               try {
+                var connString = buildConnectionString(connection.Name);
+                try
+                {
+                    /*
                     // Have not yet opened that connection, so open it and save to collection
                      if (connection.DatabaseType == DatabaseType.Teradata)
                     {
@@ -187,11 +190,11 @@ namespace ReconRunner.Model
                     }
                     else
                     {
-                        var openConnection = new OleDbConnection(connString);
-                        openConnection.Open();
-                        var connType = openConnection.GetType();
-                        openConnections.Add(connection.Name, openConnection);
-                    }
+                    */
+                    var openConnection = new OleDbConnection(connString);
+                    openConnection.Open();
+                    var connType = openConnection.GetType();
+                    openConnections.Add(connection.Name, openConnection);
                 }
                 catch (Exception ex)
                 {
