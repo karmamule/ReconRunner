@@ -79,8 +79,8 @@ namespace ReconRunner.Controller
         // Use to translate index to column letter when # columns is variable
         string columnLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";  // *** ASSUMPTION: We'll never go past Z in columns
         // These will hold DataRow objects, with the string index key for each being built from its identifying columns
-        DataTable firstQueryData = new DataTable();
-        DataTable secondQueryData = new DataTable();
+        //DataTable firstQueryData = new DataTable();
+        //DataTable secondQueryData = new DataTable();
         Dictionary<string, DataRow> q1Rows;
         Dictionary<string, DataRow> q2Rows;
         Dictionary<string, Cell> excelRow;
@@ -208,19 +208,8 @@ namespace ReconRunner.Controller
 
             try
             {
-                recons.ReconReports.ForEach(recon =>
-                {
-                    sendActionStatus(this, RequestState.Information, string.Format("Running recon {0}.", recon.Name), false); 
-                    // Get the data from the two queries that will be compared
-                    // getQueriesData(recon, ref firstQueryData, ref secondQueryData);
-                    reconData = rrDataService.GetReconData(recon);
-                    firstQueryData = reconData[0];
-                    if (recon.SecondQueryName != "")
-                        secondQueryData = reconData[1];
-                    sendActionStatus(this, RequestState.Information, string.Format("Creating Excel tab {0}.", recon.TabLabel), false);
-                    createReconTab(recon, firstQueryData, secondQueryData);
-                    sendActionStatus(this, RequestState.Succeeded, string.Format("Finished recon {0}.", recon.Name), false);
-                });
+                List<ReconReportAndData> reportsAndData = getReconData();
+                createReconTabs(reportsAndData);
             }
             catch(Exception e)
             {
@@ -244,6 +233,35 @@ namespace ReconRunner.Controller
             rrExcelService.SaveSpreadsheet(excelFileName);
             rrExcelService.CloseExcel();
             sendActionStatus(this, RequestState.Succeeded, "Saved spreadsheet, closed Excel, Done.", false);
+        }
+
+        private List<ReconReportAndData> getReconData()
+        {
+            var reconReportsAndData = new List<ReconReportAndData>();
+            recons.ReconReports.ForEach(recon =>
+            {
+                var reconAndData = new ReconReportAndData(recon);
+                sendActionStatus(this, RequestState.Information, string.Format("Getting data for recon {0}.", recon.Name), false);
+                // Get the data from the two queries that will be compared
+                // getQueriesData(recon, ref firstQueryData, ref secondQueryData);
+                var reconData = rrDataService.GetReconData(recon);
+                reconAndData.FirstQueryData = reconData[0];
+                if (recon.SecondQueryName != "")
+                    reconAndData.SecondQueryData = reconData[1];
+                reconReportsAndData.Add(reconAndData);
+                sendActionStatus(this, RequestState.Information, string.Format("Finished getting data for recon {0}.", recon.Name), false);
+            });
+            return reconReportsAndData;
+        }
+
+        private void createReconTabs(List<ReconReportAndData> reportsAndData)
+        {
+            reportsAndData.ForEach(reconAndData =>
+            {
+            sendActionStatus(this, RequestState.Information, string.Format("Creating Excel tab {0} for recon {1}.", reconAndData.ReconReport.TabLabel, reconAndData.ReconReport.Name), false);
+            createReconTab(reconAndData.ReconReport, reconAndData.FirstQueryData, reconAndData.SecondQueryData);
+            sendActionStatus(this, RequestState.Succeeded, string.Format("Finished Excel tab {0} for recon {0}.", reconAndData.ReconReport.TabLabel, reconAndData.ReconReport.Name), false);
+            });
         }
 
         /// <summary>
@@ -278,7 +296,7 @@ namespace ReconRunner.Controller
             // Create the section of the report that either shows all the rows returned by a single query recon, or
             // is the comparison section of a 2-query recon that shows any pairs of records that have differing values
             // in one or more columns that are supposed to match
-            writeDataProblems(recon);
+            writeDataProblems(recon, firstQueryData, secondQueryData);
         }
 
         /// <summary>
@@ -453,7 +471,9 @@ namespace ReconRunner.Controller
         /// columns that are marked "ShouldMatch"
         /// </summary>
         /// <param name="recon"></param>
-        private void writeDataProblems(ReconReport recon)
+        /// <param name="firstQueryData"></param>
+        /// <param name="secondQueryData"></param>
+        private void writeDataProblems(ReconReport recon, DataTable firstQueryData, DataTable secondQueryData)
         {
             CellStyle currStyle = CellStyle.LightBlue;
             int currColumnIndex;
@@ -787,16 +807,8 @@ namespace ReconRunner.Controller
                             columnAttribute = "";
                     }
                     else
-                    {
-                        if (queryColumn.FirstQueryColName == null)
-                        {
-                            columnAttribute = "(2)";
-                        }
-                        else
-                        {
-                            columnAttribute = "(1)";
-                        }
-                    }
+                            columnAttribute = queryColumn.FirstQueryColName != null ? "(1)" : "(2)";
+
                     excelRow.Add(columnLetters[currColumnIndex].ToString(), new Cell(queryColumn.Label + " " + columnAttribute, CellStyle.DarkBlueBold));
                     ++currColumnIndex;                
                 }

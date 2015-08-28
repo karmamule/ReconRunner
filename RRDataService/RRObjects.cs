@@ -131,6 +131,7 @@ namespace ReconRunner.Model
             set { sql = value.Value; }
         }
 
+        [XmlIgnore]
         public string SqlText
         {
             get
@@ -410,11 +411,13 @@ namespace ReconRunner.Model
         string firstQueryName;
         List<QueryVariable> queryVariables;
         string secondQueryName;
+        bool parallelOk;
 
         public ReconReport()
         {
             columns = new List<QueryColumn>();
             queryVariables = new List<QueryVariable>();
+            parallelOk = true;
         }
 
         /// <summary>
@@ -436,6 +439,18 @@ namespace ReconRunner.Model
         {
             get { return tabLabel; }
             set { tabLabel = value; }
+        }
+
+        /// <summary>
+        /// Set to true if its ok to run this report's queries in parallel with any other queries
+        /// for reports' that have this as true. Any reports with this set to false will have their
+        /// queries run sequentially after all parallel-ok reports' queries have run.
+        /// </summary>
+        [XmlAttribute("ParallelOk")]
+        public bool ParallelOk
+        {
+            get { return parallelOk; }
+            set { parallelOk = value; }
         }
 
         /// <summary>

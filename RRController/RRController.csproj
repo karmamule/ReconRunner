@@ -63,6 +63,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Include="ReconReportAndData.cs" />
     <Compile Include="RRController.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
