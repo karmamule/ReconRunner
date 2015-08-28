@@ -7,6 +7,8 @@ using ReconRunner;
 using ReconRunner.ExcelService;
 using ReconRunner.Model;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ReconRunner.Controller
 {
@@ -19,6 +21,8 @@ namespace ReconRunner.Controller
         private RRExcelService rrExcelService = RRExcelService.Instance;
         private string firstQueryLabel;
         private string secondQueryLabel;
+        private List<ReconReportAndData> reconReportsAndData = new List<ReconReportAndData>();
+
         public event ActionStatusEventHandler ActionStatusEvent;
         string pipePlaceholderRegex = @"\|(\w+)\|";
 
@@ -235,23 +239,31 @@ namespace ReconRunner.Controller
             sendActionStatus(this, RequestState.Succeeded, "Saved spreadsheet, closed Excel, Done.", false);
         }
 
+        /// <summary>
+        /// Modified to now run any recon reports' queries in parallel when the report is set to permit
+        /// it. Any reports that are NOT marked to allow parallel execution will then have their queries
+        /// run sequentially.
+        /// </summary>
+        /// <returns></returns>
         private List<ReconReportAndData> getReconData()
         {
-            var reconReportsAndData = new List<ReconReportAndData>();
-            recons.ReconReports.ForEach(recon =>
-            {
+            reconReportsAndData = new List<ReconReportAndData>();
+            Parallel.ForEach(recons.ReconReports.FindAll(rr => rr.ParallelOk), getReportData);
+            var sequentialReports = recons.ReconReports.FindAll(rr => !rr.ParallelOk);
+            sequentialReports.ForEach(getReportData);
+            return reconReportsAndData;
+        }
+
+        private void getReportData(ReconReport recon)
+        {
                 var reconAndData = new ReconReportAndData(recon);
                 sendActionStatus(this, RequestState.Information, string.Format("Getting data for recon {0}.", recon.Name), false);
-                // Get the data from the two queries that will be compared
-                // getQueriesData(recon, ref firstQueryData, ref secondQueryData);
                 var reconData = rrDataService.GetReconData(recon);
                 reconAndData.FirstQueryData = reconData[0];
                 if (recon.SecondQueryName != "")
                     reconAndData.SecondQueryData = reconData[1];
                 reconReportsAndData.Add(reconAndData);
                 sendActionStatus(this, RequestState.Information, string.Format("Finished getting data for recon {0}.", recon.Name), false);
-            });
-            return reconReportsAndData;
         }
 
         private void createReconTabs(List<ReconReportAndData> reportsAndData)
