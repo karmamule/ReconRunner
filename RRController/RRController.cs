@@ -249,8 +249,7 @@ namespace ReconRunner.Controller
         {
             reconReportsAndData = new List<ReconReportAndData>();
             Parallel.ForEach(recons.ReconReports.FindAll(rr => rr.ParallelOk), getReportData);
-            var sequentialReports = recons.ReconReports.FindAll(rr => !rr.ParallelOk);
-            sequentialReports.ForEach(getReportData);
+            recons.ReconReports.FindAll(rr => !rr.ParallelOk).ForEach(getReportData);
             return reconReportsAndData;
         }
 
