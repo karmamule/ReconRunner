@@ -383,10 +383,10 @@ namespace ReconRunner.Model
         }
 
         /// <summary>
-        /// Only valid for number type columns with CheckDataMatch of true.  In those cases
-        /// this indicates how much difference there can be between the values in the two
-        /// queries before the difference is reported.  If the default value of 0 then 
-        /// all differences will be reported no matter how trivial
+        /// Only valid for number type columns with CheckDataMatch of true.  The values
+        /// between two queries being compared for this column may vary by an amount up to
+        /// and including the tolerance value and still be considered a match.  A tolerance
+        /// of 0 means any differences no matter how small will be considered a mismatch.
         /// </summary>
         [XmlAttribute("Tolerance")]
         public decimal Tolerance

@@ -241,10 +241,11 @@ namespace ReconRunner.Model
 
             QueryColumn instrumentReleaseNum = new QueryColumn();
             instrumentReleaseNum.Label = "Release #";
-            instrumentReleaseNum.Type = ColumnType.text;
+            instrumentReleaseNum.Type = ColumnType.number;
             instrumentReleaseNum.IdentifyingColumn = false;
             instrumentReleaseNum.AlwaysDisplay = false;
             instrumentReleaseNum.CheckDataMatch = true;
+            instrumentReleaseNum.Tolerance = 1;
             instrumentReleaseNum.FirstQueryColName = "atins_release_number";
             instrumentReleaseNum.SecondQueryColName = "atins_release_number";
 

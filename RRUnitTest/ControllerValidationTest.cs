@@ -173,7 +173,6 @@ namespace RRUnitTest
         [TestMethod]
         public void DetectInvalidTolerance()
         {
-            // Tolerance should only be non-0 for number columns that have CheckDataMatch = true
             rrController.UseSampleData();
             var testRecon = rrController.Recons.ReconReports.Find(recon => recon.Columns.Exists(col => col.Type != ColumnType.number));
             var testQc = testRecon.Columns.Find(col => col.Type != ColumnType.number);
@@ -184,6 +183,11 @@ namespace RRUnitTest
             testQc = testRecon.Columns.Find(col => col.Type == ColumnType.number && !col.CheckDataMatch);
             testQc.Tolerance = 1;
             Assert.IsFalse(rrController.ReadyToRun(), "Did not detect a number column that is not being checked for data match yet has a non-zero tolerance.");
+            rrController.UseSampleData();
+            testRecon = rrController.Recons.ReconReports.Find(recon => recon.Columns.Exists(col => col.Type == ColumnType.number && !col.CheckDataMatch));
+            testQc = testRecon.Columns.Find(col => col.Type == ColumnType.number && col.CheckDataMatch && col.Tolerance > 0);
+            testQc.Tolerance = -1 * testQc.Tolerance;
+            Assert.IsFalse(rrController.ReadyToRun(), "Did not detect a negative tolerance.");
         }
         #endregion Test Validation Logic
     }

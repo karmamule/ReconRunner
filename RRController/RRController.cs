@@ -528,7 +528,7 @@ namespace ReconRunner.Controller
                         {
                             if (column.CheckDataMatch)
                             {
-                                if (!valuesMatch(q1Rows[rowKey][column.FirstQueryColName], q2Rows[rowKey][column.SecondQueryColName], column.Type))
+                                if (!valuesMatch(q1Rows[rowKey][column.FirstQueryColName], q2Rows[rowKey][column.SecondQueryColName], column))
                                 {
                                     // We have a mismatch that needs to be reported
                                     // First, write the identifying and 'Always Display' columns, and get the column index we're at
@@ -575,9 +575,9 @@ namespace ReconRunner.Controller
         /// </summary>
         /// <param name="value1"></param>
         /// <param name="value2"></param>
-        /// <param name="type">The ColumnType of these values</param>
+        /// <param name="column">The column these values are for</param>
         /// <returns></returns>
-        private bool valuesMatch(object value1, object value2, ColumnType type)
+        private bool valuesMatch(object value1, object value2, QueryColumn column)
         {
             // If only one value is null, return false
             if ((value1 == System.DBNull.Value && value2 != System.DBNull.Value) || (value1 != System.DBNull.Value && value2 == System.DBNull.Value))
@@ -593,7 +593,7 @@ namespace ReconRunner.Controller
 
             // Neither value is null, so compare them based on what type they should be
             // If either one fails to parse as the proper value type, then return false
-            switch (type) 
+            switch (column.Type) 
             {
                 case ColumnType.date:
                     DateTime q1DateTime;
@@ -608,14 +608,15 @@ namespace ReconRunner.Controller
                     }
                     break;
                 case ColumnType.number:
-                    float q1Float;
-                    float q2Float;
-                    if (!float.TryParse(value1.ToString(), out q1Float) ||
-                        !float.TryParse(value2.ToString(), out q2Float))
+                // Columns are considered a match if their difference is less than or equal to any tolerance threshold provided
+                    decimal q1Decimal;
+                    decimal q2Decimal;
+                    if (!decimal.TryParse(value1.ToString(), out q1Decimal) ||
+                        !decimal.TryParse(value2.ToString(), out q2Decimal))
                     {
                         return false;
                     }
-                    if (q1Float == q2Float) {
+                    if (q1Decimal == q2Decimal || (Math.Abs(q1Decimal - q2Decimal) <= column.Tolerance)) {
                         return true;
                     }
                     break;
@@ -770,7 +771,7 @@ namespace ReconRunner.Controller
             // Yes this is a second iteration through the same set of columns, but we want to make sure all
             // identifying columns precede all columns marked 'AlwaysDisplay' even if they are not in proper order
             // in the collection
-            if (numQueries == 2) /**** RESUME HERE 18-JULY ***/
+            if (numQueries == 2) 
             for (int i = 0; i < columns.Count; i++)
             {
                 queryColumn = columns[i];
@@ -781,13 +782,9 @@ namespace ReconRunner.Controller
                     if (queryColumn.FirstQueryColName != null && queryColumn.SecondQueryColName != null)
                     {
                         if (queryColumn.CheckDataMatch)
-                        {
-                            columnAttribute = "(M)";
-                        }
+                                columnAttribute = queryColumn.Tolerance == 0 ? "(M)" : string.Format("(M {0})", queryColumn.Tolerance);
                         else
-                        {
                             columnAttribute = "";
-                        }
                     }
                     else
                     {
@@ -861,14 +858,22 @@ namespace ReconRunner.Controller
 
             // Sub-title row with key to column header names
             // Only add if two-query recon
+            // The header text for matched column will vary depending on whether any non-zero tolerances exist
+            // If none, just (M) = Matched Column, else (M x) = Matched column with tolerance of x
             if (secondQueryName != "")
             {
+                string matchedColumnText = string.Empty;
+                if (recon.Columns.FindAll(col => col.Tolerance > 0).Count() == 0)
+                    matchedColumnText = "(M) = Matched Column";
+                else
+                    matchedColumnText = "(M x) = Matched Column and Tolerance";
                 excelRow.Clear();
                 excelRow.Add("A", new Cell("(Id) = Part of Unique ID", CellStyle.Italic));
                 excelRow.Add("B", new Cell("(1) = 1st Query", CellStyle.Italic));
                 excelRow.Add("C", new Cell("(2) = 2nd Query", CellStyle.Italic));
-                excelRow.Add("D", new Cell("(M) = Matched Column", CellStyle.Italic));
+                excelRow.Add("D", new Cell(matchedColumnText, CellStyle.Italic));
                 rrExcelService.AddRow(excelRow);
+                /* ***** RESUME HERE: Add tolerance label to column headers for query 1/2 orphan sections ***** */
             }
             // Spacer row
             rrExcelService.AddBlankRow();
@@ -1053,14 +1058,14 @@ namespace ReconRunner.Controller
                         reconsErrors.Add(string.Format("Recons: The recon {0} has a non-query specific variable {1} with no corresponding placeholder any related SQL", recon.Name, queryVarName));
                 });
 
-                // Any column with non-zero tolerance must be a number and CheckDataMatch is true
+                // Any column with non-zero tolerance must be a number and CheckDataMatch is true and tolerance must be a positive number
                 var invalidColumns = (from col in recon.Columns
-                                        where col.Tolerance != 0 && (col.Type != ColumnType.number || !col.CheckDataMatch)
+                                        where col.Tolerance < 0 || (col.Tolerance != 0 && (col.Type != ColumnType.number || !col.CheckDataMatch))
                                         select col.Label).ToList();
                 if (invalidColumns.Count() > 0)
                 {
                     var invalidColNames = string.Join(",", invalidColumns);
-                    reconsErrors.Add(string.Format("Recons: The columns {0} are invalid because only number columns with CheckDataMatch of true can have a non-zero tolerance. ", invalidColNames));
+                    reconsErrors.Add(string.Format("Recons: The columns {0} are invalid because tolerances must be 0 for non-number columns, or >= 0 for number columns with CheckDataMatch = true. ", invalidColNames));
                 }
 
                 // Any variables that are QuerySpecific but don't have QueryNumber of 1 or 2
